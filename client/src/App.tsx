@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from 'react';
-import DiagramEditor, { type DiagramEditorHandle } from './DiagramEditor';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import DiagramEditor from './DiagramEditor';
 import { parsePlantUML, type DiagramModel } from './plantuml/parser';
 import { generatePlantUML } from './plantuml/generator';
 import './App.css';
@@ -24,6 +24,17 @@ Customer <|-- VipCustomer
 
 type RightTab = 'edit' | 'preview';
 
+function mergePositions(parsed: DiagramModel, prev: DiagramModel): DiagramModel {
+  const prevByName = new Map(prev.nodes.map((n) => [n.name, n]));
+  return {
+    nodes: parsed.nodes.map((n) => {
+      const old = prevByName.get(n.name);
+      return old && old.x !== undefined ? { ...n, x: old.x, y: old.y } : n;
+    }),
+    edges: parsed.edges,
+  };
+}
+
 export default function App() {
   const [code, setCode] = useState(DEFAULT_CODE);
   const [model, setModel] = useState<DiagramModel>(() => parsePlantUML(DEFAULT_CODE));
@@ -32,7 +43,10 @@ export default function App() {
   const [svg, setSvg] = useState<string>('');
   const [rendering, setRendering] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const editorRef = useRef<DiagramEditorHandle>(null);
+
+  const skipNextParse = useRef(false);
+  const parseTimer = useRef<ReturnType<typeof setTimeout>>();
+  const lastSource = useRef<'code' | 'diagram'>('code');
 
   const imgSrc = useMemo(() => {
     if (!svg) return '';
@@ -40,22 +54,38 @@ export default function App() {
     return `data:image/svg+xml;base64,${base64}`;
   }, [svg]);
 
-  const handleGenerate = () => {
-    try {
-      const parsed = parsePlantUML(code);
-      setModel(parsed);
-      setResetToken((t) => t + 1);
-      setError(null);
-      setTab('edit');
-    } catch (e) {
-      setError((e as Error).message);
+  // text -> diagram, auto (debounced so we don't reparse on every keystroke)
+  useEffect(() => {
+    if (skipNextParse.current) {
+      skipNextParse.current = false;
+      return;
     }
+    clearTimeout(parseTimer.current);
+    parseTimer.current = setTimeout(() => {
+      if (lastSource.current !== 'code') return; // user moved to diagram meanwhile, drop stale parse
+      try {
+        const parsed = parsePlantUML(code);
+        setModel((prev) => mergePositions(parsed, prev));
+        setResetToken((t) => t + 1);
+        setError(null);
+      } catch (e) {
+        setError((e as Error).message);
+      }
+    }, 400);
+    return () => clearTimeout(parseTimer.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code]);
+
+  // diagram -> text, auto (DiagramEditor already debounces before calling this)
+  const handleDiagramActivity = () => {
+    lastSource.current = 'diagram';
   };
 
-  const handleSync = () => {
-    if (!editorRef.current) return;
-    const exported = editorRef.current.exportModel();
-    setCode(generatePlantUML(exported));
+  const handleDiagramChange = (updated: DiagramModel) => {
+    if (lastSource.current !== 'diagram') return; // user moved to code meanwhile, drop stale sync
+    setModel(updated);
+    skipNextParse.current = true;
+    setCode(generatePlantUML(updated));
   };
 
   const handleRender = async () => {
@@ -91,8 +121,6 @@ export default function App() {
           <div className="pane-toolbar">
             <span className="pane-label">Code</span>
             <div className="spacer" />
-            <button onClick={handleGenerate}>Generate ⇒ Diagram</button>
-            <button onClick={handleSync}>⇐ Sync from Diagram</button>
             <button onClick={handleRender} disabled={rendering}>
               {rendering ? 'Rendering…' : 'Render (official PlantUML)'}
             </button>
@@ -100,7 +128,10 @@ export default function App() {
           <textarea
             className="code-textarea"
             value={code}
-            onChange={(e) => setCode(e.target.value)}
+            onChange={(e) => {
+              lastSource.current = 'code';
+              setCode(e.target.value);
+            }}
             spellCheck={false}
           />
           {error && <div className="error-banner">{error}</div>}
@@ -117,7 +148,12 @@ export default function App() {
           </div>
           <div className="pane-content">
             {tab === 'edit' ? (
-              <DiagramEditor ref={editorRef} model={model} resetToken={resetToken} />
+              <DiagramEditor
+                model={model}
+                resetToken={resetToken}
+                onChange={handleDiagramChange}
+                onActivity={handleDiagramActivity}
+              />
             ) : (
               <div className="svg-preview">
                 {imgSrc ? (

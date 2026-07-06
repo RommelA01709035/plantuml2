@@ -3,6 +3,8 @@ export interface DiagramNode {
   name: string;
   members: string[];
   stereotype?: string;
+  x?: number;
+  y?: number;
 }
 
 export interface DiagramEdge {

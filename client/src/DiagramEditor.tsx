@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -39,7 +39,10 @@ function layoutModelNodes(model: DiagramModel, callbacks: CallbackBundle): Node<
   return model.nodes.map((n, i) => ({
     id: n.id,
     type: 'classNode',
-    position: { x: (i % cols) * spacingX + 60, y: Math.floor(i / cols) * spacingY + 60 },
+    position: {
+      x: n.x ?? (i % cols) * spacingX + 60,
+      y: n.y ?? Math.floor(i / cols) * spacingY + 60,
+    },
     data: { name: n.name, members: n.members, stereotype: n.stereotype, ...callbacks },
   }));
 }
@@ -60,24 +63,25 @@ function layoutModelEdges(model: DiagramModel): Edge[] {
   });
 }
 
-export interface DiagramEditorHandle {
-  exportModel: () => DiagramModel;
-}
-
 interface Props {
   model: DiagramModel;
   resetToken: number;
+  onChange?: (model: DiagramModel) => void;
+  onActivity?: () => void;
 }
 
-const DiagramEditor = forwardRef<DiagramEditorHandle, Props>(({ model, resetToken }, ref) => {
+function DiagramEditor({ model, resetToken, onChange, onActivity }: Props) {
   const [nodes, setNodes] = useState<Node<FlowNodeData>[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
+
+  const userEditRef = useRef(false);
 
   const onRename = useCallback((id: string) => {
     setNodes((nds) => nds.map((n) => {
       if (n.id !== id) return n;
       const name = window.prompt('Class name:', n.data.name);
       if (!name) return n;
+      userEditRef.current = true;
       return { ...n, data: { ...n.data, name } };
     }));
   }, []);
@@ -87,6 +91,7 @@ const DiagramEditor = forwardRef<DiagramEditorHandle, Props>(({ model, resetToke
       if (n.id !== id) return n;
       const member = window.prompt('New member (e.g. "+int x" or "+doSomething()")', '');
       if (!member) return n;
+      userEditRef.current = true;
       return { ...n, data: { ...n.data, members: [...n.data.members, member] } };
     }));
   }, []);
@@ -98,6 +103,7 @@ const DiagramEditor = forwardRef<DiagramEditorHandle, Props>(({ model, resetToke
       if (value === null) return n;
       const members = [...n.data.members];
       members[idx] = value;
+      userEditRef.current = true;
       return { ...n, data: { ...n.data, members } };
     }));
   }, []);
@@ -105,32 +111,79 @@ const DiagramEditor = forwardRef<DiagramEditorHandle, Props>(({ model, resetToke
   const onDeleteMember = useCallback((id: string, idx: number) => {
     setNodes((nds) => nds.map((n) => {
       if (n.id !== id) return n;
+      userEditRef.current = true;
       return { ...n, data: { ...n.data, members: n.data.members.filter((_, i) => i !== idx) } };
     }));
   }, []);
 
   const onDeleteNode = useCallback((id: string) => {
+    userEditRef.current = true;
     setNodes((nds) => nds.filter((n) => n.id !== id));
     setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
   }, []);
 
   const callbacks: CallbackBundle = { onRename, onAddMember, onEditMember, onDeleteMember, onDeleteNode };
 
+  const skipNextEmit = useRef(true);
+  const emitTimer = useRef<ReturnType<typeof setTimeout>>();
+
   useEffect(() => {
     setNodes(layoutModelNodes(model, callbacks));
     setEdges(layoutModelEdges(model));
+    skipNextEmit.current = true;
+    userEditRef.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetToken]);
 
+  useEffect(() => {
+    if (skipNextEmit.current) {
+      skipNextEmit.current = false;
+      return;
+    }
+    // ReactFlow fires nodes/edges updates internally too (dimension measuring,
+    // selection, etc). Only sync upward on changes a user actually made.
+    if (!userEditRef.current) return;
+    userEditRef.current = false;
+    onActivity?.();
+    clearTimeout(emitTimer.current);
+    emitTimer.current = setTimeout(() => {
+      onChange?.({
+        nodes: nodes.map((n) => ({
+          id: n.id,
+          name: n.data.name,
+          members: n.data.members,
+          stereotype: n.data.stereotype,
+          x: n.position.x,
+          y: n.position.y,
+        })),
+        edges: edges.map((e) => ({
+          id: e.id,
+          source: e.source,
+          target: e.target,
+          arrow: (e.data?.arrow as string) ?? '-->',
+          label: typeof e.label === 'string' ? e.label : undefined,
+        })),
+      });
+    }, 250);
+    return () => clearTimeout(emitTimer.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes, edges]);
+
   const onNodesChange = useCallback((changes: NodeChange[]) => {
     setNodes((nds) => applyNodeChanges(changes, nds) as Node<FlowNodeData>[]);
+    const meaningful = changes.some(
+      (c) => c.type === 'remove' || (c.type === 'position' && c.dragging === false),
+    );
+    if (meaningful) userEditRef.current = true;
   }, []);
 
   const onEdgesChange = useCallback((changes: EdgeChange[]) => {
     setEdges((eds) => applyEdgeChanges(changes, eds));
+    if (changes.some((c) => c.type === 'remove')) userEditRef.current = true;
   }, []);
 
   const onConnect = useCallback((connection: Connection) => {
+    userEditRef.current = true;
     setEdges((eds) => addEdge(
       { ...connection, id: nextId('e'), data: { arrow: '-->' }, markerEnd: { type: MarkerType.Arrow } },
       eds,
@@ -149,6 +202,7 @@ const DiagramEditor = forwardRef<DiagramEditorHandle, Props>(({ model, resetToke
     const arrow = parts[0];
     const label = parts.slice(1).join(' ') || undefined;
     const v = getEdgeVisual(arrow);
+    userEditRef.current = true;
     setEdges((eds) => eds.map((e) => (e.id !== edge.id ? e : {
       ...e,
       label,
@@ -163,6 +217,7 @@ const DiagramEditor = forwardRef<DiagramEditorHandle, Props>(({ model, resetToke
     const name = window.prompt('New class name:', 'NewClass');
     if (!name) return;
     const id = nextId('n');
+    userEditRef.current = true;
     setNodes((nds) => [...nds, {
       id,
       type: 'classNode',
@@ -170,19 +225,6 @@ const DiagramEditor = forwardRef<DiagramEditorHandle, Props>(({ model, resetToke
       data: { name, members: [], onRename, onAddMember, onEditMember, onDeleteMember, onDeleteNode },
     }]);
   }, [onRename, onAddMember, onEditMember, onDeleteMember, onDeleteNode]);
-
-  useImperativeHandle(ref, () => ({
-    exportModel: (): DiagramModel => ({
-      nodes: nodes.map((n) => ({ id: n.id, name: n.data.name, members: n.data.members, stereotype: n.data.stereotype })),
-      edges: edges.map((e) => ({
-        id: e.id,
-        source: e.source,
-        target: e.target,
-        arrow: (e.data?.arrow as string) ?? '-->',
-        label: typeof e.label === 'string' ? e.label : undefined,
-      })),
-    }),
-  }), [nodes, edges]);
 
   return (
     <div className="diagram-editor">
@@ -211,6 +253,6 @@ const DiagramEditor = forwardRef<DiagramEditorHandle, Props>(({ model, resetToke
       </div>
     </div>
   );
-});
+}
 
 export default DiagramEditor;
