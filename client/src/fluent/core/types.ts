@@ -24,6 +24,10 @@ export interface StepNode {
   message: string;
   // 'call' (solid arrow) is the default; 'return' renders dashed, UML-style.
   style?: 'call' | 'return';
+  // UI-only extra vertical space after this row; never encoded in generated
+  // fluent code (grammar has no layout/spacing) and not preserved across a
+  // from-scratch code reparse (only survives diagram-driven edits).
+  gapAfter?: number;
 }
 
 export interface ConditionNode {

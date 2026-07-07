@@ -19,7 +19,7 @@ import ReactFlow, {
   BaseEdge,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Check, Plus, Trash, X } from '@phosphor-icons/react';
+import { ArrowsOutLineVertical, ArrowsInLineVertical, CaretUp, CaretDown, Check, Plus, Trash, X } from '@phosphor-icons/react';
 import type { DiagramModel } from './fluent/core/types';
 import type { Address } from './fluent/astOps';
 import { computeSequenceLayout } from './fluent/sequenceLayout';
@@ -30,6 +30,10 @@ import { computeSequenceLayout } from './fluent/sequenceLayout';
 // read as a sequence diagram instead of a free-form graph.
 const TOP_Y = 40;
 const COL_GAP = 220;
+// Must match .rf-participant's CSS width — the lifeline handle sits at the
+// node's bottom-CENTER, so the anchor below needs the same half-width offset
+// or the two X coordinates won't line up and the lifeline draws diagonally.
+const PARTICIPANT_W = 140;
 const SELF_LOOP_W = 50;
 const SELF_LOOP_H = 30;
 
@@ -115,12 +119,28 @@ function ParticipantNode({ id, data }: NodeProps<ParticipantNodeData>) {
       <EditableText value={data.label} className="rf-participant-text" onCommit={(v) => data.onRename(id, v)} />
       <IconBtn icon={<Trash size={12} weight="bold" />} label="Borrar participante" danger onClick={() => data.onDelete(id)} />
       <Handle type="source" position={Position.Right} className="rf-handle" />
+      {/* Dedicated handle for the lifeline edge, centered — the left/right
+          handles above are for connect-to-create-step and sit off-center,
+          which would draw the lifeline diagonally instead of straight down. */}
+      <Handle type="source" position={Position.Bottom} id="lifeline" className="rf-handle-hidden" />
     </div>
   );
 }
 
 function AnchorNode() {
-  return <div className="rf-anchor" />;
+  return (
+    <div className="rf-anchor">
+      <Handle type="target" position={Position.Top} id="lifeline" className="rf-handle-hidden" />
+    </div>
+  );
+}
+
+interface ActivationNodeData {
+  height: number;
+}
+
+function ActivationNode({ data }: NodeProps<ActivationNodeData>) {
+  return <div className="rf-activation" style={{ height: data.height }} />;
 }
 
 interface FrameNodeData {
@@ -294,6 +314,8 @@ interface StepEdgeData {
   selfCall: boolean;
   onEditMessage: (id: string, message: string) => void;
   onDelete: (id: string) => void;
+  onMove: (direction: -1 | 1) => void;
+  onAdjustGap: (delta: number) => void;
 }
 
 function StepEdge({ id, sourceX, targetX, markerEnd, data }: EdgeProps<StepEdgeData>) {
@@ -323,7 +345,11 @@ function StepEdge({ id, sourceX, targetX, markerEnd, data }: EdgeProps<StepEdgeD
       <BaseEdge id={id} path={path} markerEnd={markerEnd} style={{ stroke: 'var(--accent)', strokeWidth: 1.6, strokeDasharray }} />
       <EdgeLabelRenderer>
         <div className="rf-edge-label" style={{ transform: `translate(-50%, -100%) translate(${labelX}px, ${labelY}px)` }}>
+          <IconBtn icon={<CaretUp size={11} weight="bold" />} label="Mover arriba" onClick={() => data?.onMove(-1)} />
+          <IconBtn icon={<CaretDown size={11} weight="bold" />} label="Mover abajo" onClick={() => data?.onMove(1)} />
           <EditableText value={label} placeholder="mensaje..." onCommit={(v) => data?.onEditMessage(id, v)} />
+          <IconBtn icon={<ArrowsOutLineVertical size={11} weight="bold" />} label="Alargar" onClick={() => data?.onAdjustGap(20)} />
+          <IconBtn icon={<ArrowsInLineVertical size={11} weight="bold" />} label="Acortar" onClick={() => data?.onAdjustGap(-20)} />
           <IconBtn icon={<Trash size={11} weight="bold" />} label="Borrar step" danger onClick={() => data?.onDelete(id)} />
         </div>
       </EdgeLabelRenderer>
@@ -331,7 +357,13 @@ function StepEdge({ id, sourceX, targetX, markerEnd, data }: EdgeProps<StepEdgeD
   );
 }
 
-const nodeTypes = { participant: ParticipantNode, anchor: AnchorNode, frame: FrameNode, separator: SeparatorNode };
+const nodeTypes = {
+  participant: ParticipantNode,
+  anchor: AnchorNode,
+  frame: FrameNode,
+  separator: SeparatorNode,
+  activation: ActivationNode,
+};
 const edgeTypes = { step: StepEdge };
 
 export type StepAddress = Address;
@@ -348,6 +380,8 @@ interface Props {
   onConnect: (source: string, target: string) => void;
   onEditStepMessage: (address: Address, message: string) => void;
   onDeleteStep: (address: Address) => void;
+  onMoveStep: (address: Address, direction: -1 | 1) => void;
+  onAdjustStepGap: (address: Address, gapAfter: number) => void;
   onEditConditionLabel: (address: Address, label: string) => void;
   onDeleteCondition: (address: Address) => void;
   onAddStep: (branchAddress: Address, from: string, to: string, message: string) => void;
@@ -365,6 +399,8 @@ export default function ParticipantGraph({
   onConnect,
   onEditStepMessage,
   onDeleteStep,
+  onMoveStep,
+  onAdjustStepGap,
   onEditConditionLabel,
   onDeleteCondition,
   onAddStep,
@@ -411,8 +447,10 @@ export default function ParticipantGraph({
     const layout = computeSequenceLayout(model);
 
     const nextNodes: Node[] = [];
+    const participantX = new Map<string, number>();
     model.components.forEach((c, i) => {
       const x = c.x ?? i * COL_GAP + 40;
+      participantX.set(c.id, x);
       nextNodes.push({
         id: c.id,
         type: 'participant',
@@ -422,8 +460,22 @@ export default function ParticipantGraph({
       nextNodes.push({
         id: anchorId(c.id),
         type: 'anchor',
-        position: { x, y: layout.bottomY },
+        position: { x: x + PARTICIPANT_W / 2, y: layout.bottomY },
         data: {},
+        draggable: false,
+        selectable: false,
+        focusable: false,
+      });
+    });
+
+    layout.activations.forEach((a, i) => {
+      const px = participantX.get(a.participantId);
+      if (px === undefined) return;
+      nextNodes.push({
+        id: `activation-${a.participantId}-${i}`,
+        type: 'activation',
+        position: { x: px + PARTICIPANT_W / 2 - 5, y: a.startY },
+        data: { height: a.endY - a.startY },
         draggable: false,
         selectable: false,
         focusable: false,
@@ -469,12 +521,14 @@ export default function ParticipantGraph({
     const lifelineEdges: Edge[] = model.components.map((c) => ({
       id: `lifeline-${c.id}`,
       source: c.id,
+      sourceHandle: 'lifeline',
       target: anchorId(c.id),
+      targetHandle: 'lifeline',
       type: 'straight',
       selectable: false,
       focusable: false,
       interactionWidth: 0,
-      style: { stroke: 'var(--line)', strokeWidth: 1.5, strokeDasharray: '3 4' },
+      style: { stroke: 'var(--ink)', strokeWidth: 1.5, strokeDasharray: '4 4' },
     }));
 
     const stepEdges: Edge<StepEdgeData>[] = layout.steps.map((s) => ({
@@ -489,6 +543,8 @@ export default function ParticipantGraph({
         selfCall: s.from === s.to,
         onEditMessage: (edgeId: string, msg: string) => handleEditStepMessage(edgeId, msg, s.address),
         onDelete: () => onDeleteStep(s.address),
+        onMove: (direction: -1 | 1) => onMoveStep(s.address, direction),
+        onAdjustGap: (delta: number) => onAdjustStepGap(s.address, s.gapAfter + delta),
       },
       markerEnd: { type: s.style === 'return' ? MarkerType.Arrow : MarkerType.ArrowClosed },
     }));
@@ -509,11 +565,12 @@ export default function ParticipantGraph({
         const next = applyNodeChanges(adjusted, nds);
         const byId = new Map(next.map((n) => [n.id, n]));
         // Keep each anchor's X glued to its participant's X so the lifeline follows drag.
-        return next.map((n) =>
-          n.type === 'anchor'
-            ? { ...n, position: { x: byId.get(n.id.replace(/__anchor$/, ''))?.position.x ?? n.position.x, y: n.position.y } }
-            : n,
-        );
+        return next.map((n) => {
+          if (n.type !== 'anchor') return n;
+          const participantX = byId.get(n.id.replace(/__anchor$/, ''))?.position.x;
+          const x = participantX !== undefined ? participantX + PARTICIPANT_W / 2 : n.position.x;
+          return { ...n, position: { x, y: n.position.y } };
+        });
       });
       for (const c of changes) {
         if (c.type === 'position' && c.dragging === false && c.position && !c.id.endsWith('__anchor')) {

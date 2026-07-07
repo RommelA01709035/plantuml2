@@ -14,6 +14,8 @@ import {
   editConditionLabel,
   editSeparatorLabel,
   deleteNode,
+  moveNode,
+  setStepGap,
 } from './fluent/astOps';
 import ParticipantGraph from './ParticipantGraph';
 
@@ -60,14 +62,25 @@ function runFluentCode(code: string): { ast: DiagramModel; warnings: { message: 
   return { ast: result.ast, warnings: result.warnings };
 }
 
-// A cheap signature of everything that affects the graph's SHAPE (participant
-// list, root-level step wiring, root-level node count). Rename/move/message
-// edits don't change this, so the canvas only rebuilds when it truly must.
+// A cheap signature of everything that affects the graph's SHAPE or vertical
+// LAYOUT: participant list, and the from/to/style/order/gapAfter of every
+// step at any depth (so reordering, add/delete, or stretching a row all
+// trigger a rebuild). Rename/move/message-text/label edits don't change this
+// on purpose, so the canvas only rebuilds when it truly must.
+function flowSignature(nodes: DiagramModel['flow']): string {
+  return nodes
+    .map((n) =>
+      n.kind === 'step'
+        ? `s:${n.from}>${n.to}:${n.style ?? 'call'}:${n.gapAfter ?? 0}`
+        : n.kind === 'separator'
+          ? 'sep'
+          : `c(${flowSignature(n.thenBranch)}|${flowSignature(n.otherwiseBranch)})`,
+    )
+    .join(',');
+}
+
 function rootSignature(m: DiagramModel): string {
-  return JSON.stringify([
-    m.components.map((c) => c.id),
-    m.flow.map((n) => (n.kind === 'step' ? `s:${n.from}>${n.to}` : 'c')),
-  ]);
+  return JSON.stringify([m.components.map((c) => c.id), flowSignature(m.flow)]);
 }
 
 function mergePositions(parsed: DiagramModel, prev: DiagramModel): DiagramModel {
@@ -184,6 +197,8 @@ export default function FluentEditor() {
               onConnect={(source, target) => applyDiagramChange(addStep(ast, [], source, target, 'nuevo paso'))}
               onEditStepMessage={(address, message) => applyDiagramChange(editStepMessage(ast, address, message))}
               onDeleteStep={(address) => applyDiagramChange(deleteNode(ast, address))}
+              onMoveStep={(address, direction) => applyDiagramChange(moveNode(ast, address, direction))}
+              onAdjustStepGap={(address, gapAfter) => applyDiagramChange(setStepGap(ast, address, gapAfter))}
               onEditConditionLabel={(address, label) => applyDiagramChange(editConditionLabel(ast, address, label))}
               onDeleteCondition={(address) => applyDiagramChange(deleteNode(ast, address))}
               onAddStep={(branchAddress, from, to, message) => applyDiagramChange(addStep(ast, branchAddress, from, to, message))}

@@ -11,6 +11,7 @@ export interface FlatStep {
   message: string;
   style: 'call' | 'return';
   y: number;
+  gapAfter: number;
 }
 
 export interface FlatSeparator {
@@ -27,59 +28,87 @@ export interface FrameInfo {
   endY: number;
 }
 
+export interface ActivationInfo {
+  participantId: string;
+  startY: number;
+  endY: number;
+}
+
 export interface SequenceLayout {
   steps: FlatStep[];
   separators: FlatSeparator[];
   frames: FrameInfo[];
+  activations: ActivationInfo[];
   bottomY: number;
 }
 
 // Flattens the whole (possibly nested) flow tree into a single ordered list of
 // step/separator rows plus the Y-range each condition ("alt" fragment) spans,
 // so the canvas can draw everything at its correct temporal position
-// regardless of nesting depth.
+// regardless of nesting depth. Y advances via a running cursor (not a fixed
+// index*ROW_HEIGHT) so a step's optional `gapAfter` can stretch the rows
+// below it without needing manual per-row math anywhere else.
 export function computeSequenceLayout(model: DiagramModel): SequenceLayout {
   const steps: FlatStep[] = [];
   const separators: FlatSeparator[] = [];
   const frames: FrameInfo[] = [];
-  let rowIndex = 0;
-
-  const rowY = (idx: number) => ROW_START + idx * ROW_HEIGHT;
+  const activations: ActivationInfo[] = [];
+  // Simple stack-based activation tracking: a 'call' opens an activation on
+  // the receiver, a matching 'return' from that same participant closes the
+  // most recent one (LIFO). Anything left open closes at the diagram's end —
+  // exactly the "simple version" fallback, not perfect nested-call accounting.
+  const openActivations = new Map<string, number[]>();
+  let cursorY = ROW_START;
 
   function walk(nodes: FlowNode[], address: Address): void {
     nodes.forEach((node, i) => {
       const addr = [...address, i];
       if (node.kind === 'step') {
-        steps.push({
-          address: addr,
-          from: node.from,
-          to: node.to,
-          message: node.message,
-          style: node.style ?? 'call',
-          y: rowY(rowIndex),
-        });
-        rowIndex += 1;
+        const y = cursorY;
+        const style = node.style ?? 'call';
+        const gapAfter = node.gapAfter ?? 0;
+        steps.push({ address: addr, from: node.from, to: node.to, message: node.message, style, y, gapAfter });
+
+        if (node.from !== node.to) {
+          if (style === 'call') {
+            const stack = openActivations.get(node.to) ?? [];
+            stack.push(y);
+            openActivations.set(node.to, stack);
+          } else {
+            const stack = openActivations.get(node.from);
+            const startY = stack?.pop();
+            if (startY !== undefined) activations.push({ participantId: node.from, startY, endY: y });
+          }
+        }
+        cursorY += ROW_HEIGHT + gapAfter;
       } else if (node.kind === 'separator') {
-        separators.push({ address: addr, label: node.label, y: rowY(rowIndex) });
-        rowIndex += 1;
+        separators.push({ address: addr, label: node.label, y: cursorY });
+        cursorY += ROW_HEIGHT;
       } else {
-        const startY = rowY(rowIndex) - ROW_HEIGHT * 0.55;
+        const startY = cursorY - ROW_HEIGHT * 0.55;
         walkBranch(node.thenBranch, [...addr, 'thenBranch']);
-        const dividerY = rowY(rowIndex) - ROW_HEIGHT * 0.55;
+        const dividerY = cursorY - ROW_HEIGHT * 0.55;
         walkBranch(node.otherwiseBranch, [...addr, 'otherwiseBranch']);
-        const endY = rowY(rowIndex) - ROW_HEIGHT * 0.55;
+        const endY = cursorY - ROW_HEIGHT * 0.55;
         frames.push({ address: addr, label: node.label, startY, dividerY, endY });
       }
     });
   }
 
   function walkBranch(nodes: FlowNode[], address: Address): void {
-    const before = rowIndex;
+    const before = cursorY;
     walk(nodes, address);
-    if (rowIndex === before) rowIndex += 1; // reserve space for an empty branch
+    if (cursorY === before) cursorY += ROW_HEIGHT; // reserve space for an empty branch
   }
 
   walk(model.flow, []);
 
-  return { steps, separators, frames, bottomY: rowY(Math.max(rowIndex, 1)) + 20 };
+  const bottomY = cursorY + 20;
+
+  // Close whatever never got an explicit .return() — ends at the diagram bottom.
+  for (const [participantId, stack] of openActivations) {
+    for (const startY of stack) activations.push({ participantId, startY, endY: bottomY - 20 });
+  }
+
+  return { steps, separators, frames, activations, bottomY };
 }

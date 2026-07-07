@@ -93,6 +93,30 @@ export function deleteNode(model: DiagramModel, address: Address): DiagramModel 
   return { ...model, flow: deleteNodeAt(model.flow, address) };
 }
 
+// Swaps a node with its previous (-1) or next (+1) sibling in the same
+// array — lets the user reorder a step/condition in time.
+export function moveNode(model: DiagramModel, address: Address, direction: -1 | 1): DiagramModel {
+  const idx = address[address.length - 1] as number;
+  const parentAddress = address.slice(0, -1);
+  return {
+    ...model,
+    flow: updateArrayAt(model.flow, [...parentAddress, 0], (arr) => {
+      const newIdx = idx + direction;
+      if (newIdx < 0 || newIdx >= arr.length) return arr;
+      const copy = [...arr];
+      [copy[idx], copy[newIdx]] = [copy[newIdx], copy[idx]];
+      return copy;
+    }),
+  };
+}
+
+export function setStepGap(model: DiagramModel, address: Address, gapAfter: number): DiagramModel {
+  return {
+    ...model,
+    flow: updateNodeAt(model.flow, address, (n) => (n.kind === 'step' ? { ...n, gapAfter: Math.max(0, gapAfter) } : n)),
+  };
+}
+
 export function addStep(
   model: DiagramModel,
   branchAddress: Address,

@@ -201,8 +201,28 @@
 }
 
 .rf-anchor {
+  position: relative;
   width: 1px;
   height: 1px;
+}
+
+.rf-handle-hidden {
+  width: 1px;
+  height: 1px;
+  min-width: 1px;
+  min-height: 1px;
+  opacity: 0;
+  border: none;
+  background: transparent;
+  pointer-events: none;
+}
+
+.rf-activation {
+  width: 10px;
+  background: var(--paper);
+  border: 1.5px solid var(--accent);
+  border-radius: 2px;
+  pointer-events: none;
 }
 
 .rf-canvas .react-flow__attribution {
@@ -217,7 +237,8 @@
   border: 1.5px solid var(--accent);
   border-radius: var(--radius);
   padding: 6px 8px;
-  min-width: 120px;
+  width: 140px;
+  box-sizing: border-box;
   box-shadow: 0 1px 2px rgb(23 23 31 / 0.06);
 }
 
