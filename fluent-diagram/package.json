@@ -1,0 +1,15 @@
+{
+  "name": "fluent-diagram",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "example": "tsc -p tsconfig.json && node dist/examples/login.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  }
+}
