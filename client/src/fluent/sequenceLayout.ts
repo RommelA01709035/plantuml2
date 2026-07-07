@@ -14,6 +14,10 @@ export interface FlatStep {
   gapAfter: number;
   xShift: number;
   xStretch: number;
+  // Whether from/to already has an open activation bar at this row — lets the
+  // renderer land the arrow on the bar's edge instead of the bare lifeline.
+  sourceActive: boolean;
+  targetActive: boolean;
 }
 
 export interface FlatSeparator {
@@ -71,19 +75,38 @@ export function computeSequenceLayout(model: DiagramModel): SequenceLayout {
         const gapAfter = node.gapAfter ?? 0;
         const xShift = node.xShift ?? 0;
         const xStretch = node.xStretch ?? 0;
-        steps.push({ address: addr, from: node.from, to: node.to, message: node.message, style, y, gapAfter, xShift, xStretch });
 
+        let sourceActive = false;
+        let targetActive = false;
         if (node.from !== node.to) {
           if (style === 'call') {
+            sourceActive = (openActivations.get(node.from)?.length ?? 0) > 0;
             const stack = openActivations.get(node.to) ?? [];
             stack.push(y);
             openActivations.set(node.to, stack);
+            targetActive = true; // just opened by this very call
           } else {
             const stack = openActivations.get(node.from);
+            sourceActive = !!stack?.length; // closing an activation that was open
             const startY = stack?.pop();
             if (startY !== undefined) activations.push({ participantId: node.from, startY, endY: y });
+            targetActive = (openActivations.get(node.to)?.length ?? 0) > 0;
           }
         }
+
+        steps.push({
+          address: addr,
+          from: node.from,
+          to: node.to,
+          message: node.message,
+          style,
+          y,
+          gapAfter,
+          xShift,
+          xStretch,
+          sourceActive,
+          targetActive,
+        });
         cursorY += ROW_HEIGHT + gapAfter;
       } else if (node.kind === 'separator') {
         separators.push({ address: addr, label: node.label, y: cursorY });

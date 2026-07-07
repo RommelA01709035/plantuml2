@@ -47,6 +47,8 @@ const COL_GAP = 220;
 const PARTICIPANT_W = 140;
 const SELF_LOOP_W = 50;
 const SELF_LOOP_H = 30;
+// Must match .rf-activation's CSS width / 2.
+const ACTIVATION_HALF_W = 5;
 
 const anchorId = (participantId: string) => `${participantId}__anchor`;
 const frameId = (addr: Address) => `frame-${addr.join('-')}`;
@@ -130,10 +132,12 @@ function ParticipantNode({ id, data }: NodeProps<ParticipantNodeData>) {
       <EditableText value={data.label} className="rf-participant-text" onCommit={(v) => data.onRename(id, v)} />
       <IconBtn icon={<Trash size={12} weight="bold" />} label="Borrar participante" danger onClick={() => data.onDelete(id)} />
       <Handle type="source" position={Position.Right} className="rf-handle" />
-      {/* Dedicated handle for the lifeline edge, centered — the left/right
-          handles above are for connect-to-create-step and sit off-center,
-          which would draw the lifeline diagonally instead of straight down. */}
+      {/* Centered handles (not the left/right ones above, which sit at the box
+          edge for connect-drag UX) — the lifeline AND every step edge anchor
+          here, so arrows actually land on the dashed lifeline / activation
+          bars instead of drifting to the box's outer edge. */}
       <Handle type="source" position={Position.Bottom} id="lifeline" className="rf-handle-hidden" />
+      <Handle type="target" position={Position.Bottom} id="lifeline-in" className="rf-handle-hidden" />
     </div>
   );
 }
@@ -323,6 +327,8 @@ interface StepEdgeData {
   rowY: number;
   style: 'call' | 'return';
   selfCall: boolean;
+  sourceActive: boolean;
+  targetActive: boolean;
   xShift: number;
   xStretch: number;
   onEditMessage: (id: string, message: string) => void;
@@ -406,8 +412,12 @@ function StepEdge({ id, sourceX, targetX, markerEnd, data }: EdgeProps<StepEdgeD
     tipX = x + loopW;
     tipY = y + SELF_LOOP_H / 2;
   } else {
-    const sx = sourceX + xShift;
-    let tx = (sourceX === targetX ? targetX + 60 : targetX) + xShift;
+    // Land on the activation bar's edge (not the bare lifeline) when that
+    // end already has one open — real UML convention.
+    const sourceEdgeOffset = data?.sourceActive ? dir * ACTIVATION_HALF_W : 0;
+    const targetEdgeOffset = data?.targetActive ? -dir * ACTIVATION_HALF_W : 0;
+    const sx = sourceX + sourceEdgeOffset + xShift;
+    let tx = (sourceX === targetX ? targetX + 60 : targetX) + targetEdgeOffset + xShift;
     tx += dir * xStretch;
     path = `M ${sx} ${y} L ${tx} ${y}`;
     labelX = (sx + tx) / 2;
@@ -623,13 +633,17 @@ export default function ParticipantGraph({
     const stepEdges: Edge<StepEdgeData>[] = layout.steps.map((s) => ({
       id: `step-${s.address.join('-')}`,
       source: s.from,
+      sourceHandle: 'lifeline',
       target: s.to,
+      targetHandle: 'lifeline-in',
       type: 'step',
       data: {
         label: s.message,
         rowY: s.y,
         style: s.style,
         selfCall: s.from === s.to,
+        sourceActive: s.sourceActive,
+        targetActive: s.targetActive,
         xShift: s.xShift,
         xStretch: s.xStretch,
         onEditMessage: (edgeId: string, msg: string) => handleEditStepMessage(edgeId, msg, s.address),
