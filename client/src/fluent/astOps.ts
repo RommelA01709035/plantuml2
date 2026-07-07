@@ -68,6 +68,13 @@ export function addComponent(model: DiagramModel, component: ComponentDefinition
   return { ...model, components: [...model.components, component] };
 }
 
+export function moveComponent(model: DiagramModel, id: string, x: number, y: number): DiagramModel {
+  return {
+    ...model,
+    components: model.components.map((c) => (c.id === id ? { ...c, x, y } : c)),
+  };
+}
+
 export function editStepMessage(model: DiagramModel, address: Address, message: string): DiagramModel {
   return {
     ...model,
@@ -94,4 +101,28 @@ export function addStep(model: DiagramModel, branchAddress: Address, from: strin
 export function addCondition(model: DiagramModel, branchAddress: Address, label: string): DiagramModel {
   const condition: ConditionNode = { kind: 'condition', label, thenBranch: [], otherwiseBranch: [] };
   return { ...model, flow: appendNodeAt(model.flow, branchAddress, condition) };
+}
+
+function filterFlowByComponent(nodes: FlowNode[], removedId: string): FlowNode[] {
+  return nodes
+    .filter((n) => !(n.kind === 'step' && (n.from === removedId || n.to === removedId)))
+    .map((n) =>
+      n.kind === 'condition'
+        ? {
+            ...n,
+            thenBranch: filterFlowByComponent(n.thenBranch, removedId),
+            otherwiseBranch: filterFlowByComponent(n.otherwiseBranch, removedId),
+          }
+        : n,
+    );
+}
+
+// Removes a participant and any step (anywhere in the tree) that referenced it,
+// so the diagram never keeps a dangling from/to id.
+export function deleteComponent(model: DiagramModel, id: string): DiagramModel {
+  return {
+    ...model,
+    components: model.components.filter((c) => c.id !== id),
+    flow: filterFlowByComponent(model.flow, id),
+  };
 }

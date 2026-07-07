@@ -12,6 +12,9 @@ export interface ComponentDefinition {
   id: string;
   label: string;
   type: ComponentType;
+  // UI-only; never encoded in generated fluent code (grammar has no coordinates).
+  x?: number;
+  y?: number;
 }
 
 export interface StepNode {

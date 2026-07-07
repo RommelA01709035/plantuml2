@@ -180,93 +180,151 @@
   padding: 20px;
 }
 
-/* ---- Diagram view ---- */
+/* ---- Diagram: participant graph (ReactFlow) ---- */
 
-.diagram-view-wrap {
+.diagram-scroll {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  background: var(--paper);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 18px;
 }
 
-.diagram-toolbar {
-  display: flex;
-  gap: 8px;
+.rf-canvas {
+  height: 380px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  overflow: hidden;
 }
 
-.diagram-view {
-  position: relative;
+.rf-canvas .react-flow__attribution {
+  display: none;
 }
 
-.diagram-svg {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.diagram-lifeline {
-  stroke: var(--line);
-  stroke-width: 1.5;
-  stroke-dasharray: 3, 4;
-}
-
-.diagram-arrow {
-  stroke: var(--accent);
-  stroke-width: 1.6;
-}
-
-.diagram-arrowhead {
-  fill: var(--accent);
-}
-
-.diagram-overlay {
-  position: absolute;
-  inset: 0;
-}
-
-.diagram-participant {
-  position: absolute;
+.rf-participant {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 4px;
   background: var(--paper);
   border: 1.5px solid var(--accent);
   border-radius: var(--radius);
+  padding: 6px 8px;
+  min-width: 120px;
   box-shadow: 0 1px 2px rgb(23 23 31 / 0.06);
 }
 
-.diagram-participant-text {
+.rf-participant-text {
   font-weight: 600;
   font-size: 13px;
+  flex: 1;
 }
 
-.diagram-row {
+.rf-handle {
+  width: 9px;
+  height: 9px;
+  background: var(--accent);
+  border: 2px solid var(--paper);
+  transition: transform 120ms var(--ease-out);
+}
+
+.rf-handle:hover {
+  transform: scale(1.3);
+}
+
+.rf-edge-label {
   position: absolute;
   display: flex;
   align-items: center;
+  gap: 4px;
+  background: var(--paper);
+  padding: 2px 4px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  pointer-events: all;
+}
+
+.rf-edge-label .icon-btn {
+  width: 18px;
+  height: 18px;
+}
+
+/* ---- Diagram: condition tree (nested list) ---- */
+
+.cond-tree-wrap {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
+.cond-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cond-block {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cond-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cond-branch {
+  padding-left: 18px;
+  border-left: 2px solid var(--line);
+  display: flex;
+  flex-direction: column;
   gap: 6px;
 }
 
-.diagram-row-step {
-  justify-content: center;
-  text-align: center;
+.cond-branch-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
 }
 
-.diagram-step-message {
+.cond-flow-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cond-step-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12px;
-  color: var(--ink);
-  background: var(--paper);
-  padding: 0 4px;
 }
 
-.diagram-row-step .icon-btn {
-  position: relative;
+.cond-step-from-to {
+  color: var(--ink-soft);
+  font-size: 11px;
+  white-space: nowrap;
 }
 
-.diagram-row-condition,
-.diagram-row-divider,
-.diagram-row-end,
-.diagram-row-root-add {
-  gap: 8px;
+.cond-step-message {
+  font-size: 12px;
+}
+
+.cond-step-row .icon-btn {
+  opacity: 0;
+}
+
+.cond-step-row:hover .icon-btn {
+  opacity: 1;
 }
 
 .diagram-condition-tag {
@@ -340,17 +398,21 @@
   background: transparent;
   color: var(--ink-soft);
   cursor: pointer;
-  opacity: 0;
+  opacity: 0.5;
   transition: opacity 120ms ease, background-color 120ms ease, transform 120ms var(--ease-out), color 120ms ease;
   flex-shrink: 0;
 }
 
-.diagram-row:hover .icon-btn,
-.diagram-participant:hover .icon-btn {
+.cond-step-row:hover .icon-btn,
+.cond-header:hover .icon-btn,
+.rf-participant:hover .icon-btn,
+.rf-edge-label:hover .icon-btn,
+.diagram-add-form .icon-btn {
   opacity: 1;
 }
 
 .icon-btn:hover {
+  opacity: 1;
   background: var(--paper-dim);
   color: var(--ink);
 }
