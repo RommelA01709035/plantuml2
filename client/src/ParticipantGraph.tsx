@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -8,6 +8,7 @@ import ReactFlow, {
   applyEdgeChanges,
   applyNodeChanges,
   useNodes,
+  useViewport,
   type Connection,
   type Edge,
   type EdgeChange,
@@ -19,7 +20,17 @@ import ReactFlow, {
   BaseEdge,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { ArrowsOutLineVertical, ArrowsInLineVertical, CaretUp, CaretDown, Check, Plus, Trash, X } from '@phosphor-icons/react';
+import {
+  ArrowsOutLineVertical,
+  ArrowsInLineVertical,
+  CaretUp,
+  CaretDown,
+  Check,
+  DotsSixVertical,
+  Plus,
+  Trash,
+  X,
+} from '@phosphor-icons/react';
 import type { DiagramModel } from './fluent/core/types';
 import type { Address } from './fluent/astOps';
 import { computeSequenceLayout } from './fluent/sequenceLayout';
@@ -312,10 +323,51 @@ interface StepEdgeData {
   rowY: number;
   style: 'call' | 'return';
   selfCall: boolean;
+  xShift: number;
+  xStretch: number;
   onEditMessage: (id: string, message: string) => void;
   onDelete: (id: string) => void;
   onMove: (direction: -1 | 1) => void;
   onAdjustGap: (delta: number) => void;
+  onAdjustXShift: (delta: number) => void;
+  onAdjustXStretch: (delta: number) => void;
+}
+
+// Drag a handle horizontally; reports the live offset for instant visual
+// feedback, and the final delta once on release (canvas-space, zoom-aware).
+function useHorizontalDrag(onCommit: (delta: number) => void) {
+  const { zoom } = useViewport();
+  const [offset, setOffset] = useState(0);
+  const startX = useRef(0);
+  const dragging = useRef(false);
+  const offsetRef = useRef(0);
+
+  const onPointerDown = (e: ReactPointerEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    dragging.current = true;
+    startX.current = e.clientX;
+  };
+  const onPointerMove = (e: ReactPointerEvent) => {
+    if (!dragging.current) return;
+    const next = (e.clientX - startX.current) / zoom;
+    offsetRef.current = next;
+    setOffset(next);
+  };
+  const endDrag = () => {
+    if (!dragging.current) return;
+    dragging.current = false;
+    const final = offsetRef.current;
+    offsetRef.current = 0;
+    setOffset(0);
+    if (Math.abs(final) > 0.5) onCommit(final);
+  };
+
+  return {
+    offset,
+    handlers: { onPointerDown, onPointerMove, onPointerUp: endDrag, onPointerCancel: endDrag },
+  };
 }
 
 function StepEdge({ id, sourceX, targetX, markerEnd, data }: EdgeProps<StepEdgeData>) {
@@ -323,21 +375,45 @@ function StepEdge({ id, sourceX, targetX, markerEnd, data }: EdgeProps<StepEdgeD
   const y = data?.rowY ?? 0;
   const isReturn = data?.style === 'return';
   const strokeDasharray = isReturn ? '6 4' : undefined;
+  const baseXShift = data?.xShift ?? 0;
+  const baseXStretch = data?.xStretch ?? 0;
+  const selfCall = !!data?.selfCall;
+
+  // Which way "stretch" should grow — outward from source, in the arrow's
+  // own direction — computed from the committed (non-live) values.
+  const baseSx = sourceX + baseXShift;
+  const baseRawTx = selfCall ? baseSx + SELF_LOOP_W : (sourceX === targetX ? targetX + 60 : targetX) + baseXShift;
+  const dir = selfCall ? 1 : baseRawTx >= baseSx ? 1 : -1;
+
+  const shiftDrag = useHorizontalDrag((delta) => data?.onAdjustXShift(delta));
+  const stretchDrag = useHorizontalDrag((delta) => data?.onAdjustXStretch(dir * delta));
+
+  const xShift = baseXShift + shiftDrag.offset;
+  const xStretch = Math.max(0, baseXStretch + dir * stretchDrag.offset);
 
   let path: string;
   let labelX: number;
   let labelY: number;
+  let tipX: number;
+  let tipY: number;
 
-  if (data?.selfCall) {
-    const x = sourceX;
-    path = `M ${x} ${y} L ${x + SELF_LOOP_W} ${y} L ${x + SELF_LOOP_W} ${y + SELF_LOOP_H} L ${x} ${y + SELF_LOOP_H}`;
-    labelX = x + SELF_LOOP_W / 2;
+  if (selfCall) {
+    const x = sourceX + xShift;
+    const loopW = SELF_LOOP_W + xStretch;
+    path = `M ${x} ${y} L ${x + loopW} ${y} L ${x + loopW} ${y + SELF_LOOP_H} L ${x} ${y + SELF_LOOP_H}`;
+    labelX = x + loopW / 2;
     labelY = y;
+    tipX = x + loopW;
+    tipY = y + SELF_LOOP_H / 2;
   } else {
-    const x2 = sourceX === targetX ? targetX + 60 : targetX;
-    path = `M ${sourceX} ${y} L ${x2} ${y}`;
-    labelX = (sourceX + x2) / 2;
+    const sx = sourceX + xShift;
+    let tx = (sourceX === targetX ? targetX + 60 : targetX) + xShift;
+    tx += dir * xStretch;
+    path = `M ${sx} ${y} L ${tx} ${y}`;
+    labelX = (sx + tx) / 2;
     labelY = y;
+    tipX = tx;
+    tipY = y;
   }
 
   return (
@@ -345,13 +421,22 @@ function StepEdge({ id, sourceX, targetX, markerEnd, data }: EdgeProps<StepEdgeD
       <BaseEdge id={id} path={path} markerEnd={markerEnd} style={{ stroke: 'var(--accent)', strokeWidth: 1.6, strokeDasharray }} />
       <EdgeLabelRenderer>
         <div className="rf-edge-label" style={{ transform: `translate(-50%, -100%) translate(${labelX}px, ${labelY}px)` }}>
+          <span className="rf-drag-grip" title="Arrastra pa mover en X" {...shiftDrag.handlers}>
+            <DotsSixVertical size={12} weight="bold" />
+          </span>
           <IconBtn icon={<CaretUp size={11} weight="bold" />} label="Mover arriba" onClick={() => data?.onMove(-1)} />
           <IconBtn icon={<CaretDown size={11} weight="bold" />} label="Mover abajo" onClick={() => data?.onMove(1)} />
           <EditableText value={label} placeholder="mensaje..." onCommit={(v) => data?.onEditMessage(id, v)} />
-          <IconBtn icon={<ArrowsOutLineVertical size={11} weight="bold" />} label="Alargar" onClick={() => data?.onAdjustGap(20)} />
-          <IconBtn icon={<ArrowsInLineVertical size={11} weight="bold" />} label="Acortar" onClick={() => data?.onAdjustGap(-20)} />
+          <IconBtn icon={<ArrowsOutLineVertical size={11} weight="bold" />} label="Alargar (Y)" onClick={() => data?.onAdjustGap(20)} />
+          <IconBtn icon={<ArrowsInLineVertical size={11} weight="bold" />} label="Acortar (Y)" onClick={() => data?.onAdjustGap(-20)} />
           <IconBtn icon={<Trash size={11} weight="bold" />} label="Borrar step" danger onClick={() => data?.onDelete(id)} />
         </div>
+        <div
+          className="rf-stretch-handle"
+          title="Arrastra pa alargar/acortar en X"
+          style={{ transform: `translate(-50%, -50%) translate(${tipX}px, ${tipY}px)` }}
+          {...stretchDrag.handlers}
+        />
       </EdgeLabelRenderer>
     </>
   );
@@ -382,6 +467,8 @@ interface Props {
   onDeleteStep: (address: Address) => void;
   onMoveStep: (address: Address, direction: -1 | 1) => void;
   onAdjustStepGap: (address: Address, gapAfter: number) => void;
+  onAdjustStepXShift: (address: Address, xShift: number) => void;
+  onAdjustStepXStretch: (address: Address, xStretch: number) => void;
   onEditConditionLabel: (address: Address, label: string) => void;
   onDeleteCondition: (address: Address) => void;
   onAddStep: (branchAddress: Address, from: string, to: string, message: string) => void;
@@ -401,6 +488,8 @@ export default function ParticipantGraph({
   onDeleteStep,
   onMoveStep,
   onAdjustStepGap,
+  onAdjustStepXShift,
+  onAdjustStepXStretch,
   onEditConditionLabel,
   onDeleteCondition,
   onAddStep,
@@ -541,10 +630,14 @@ export default function ParticipantGraph({
         rowY: s.y,
         style: s.style,
         selfCall: s.from === s.to,
+        xShift: s.xShift,
+        xStretch: s.xStretch,
         onEditMessage: (edgeId: string, msg: string) => handleEditStepMessage(edgeId, msg, s.address),
         onDelete: () => onDeleteStep(s.address),
         onMove: (direction: -1 | 1) => onMoveStep(s.address, direction),
         onAdjustGap: (delta: number) => onAdjustStepGap(s.address, s.gapAfter + delta),
+        onAdjustXShift: (delta: number) => onAdjustStepXShift(s.address, s.xShift + delta),
+        onAdjustXStretch: (delta: number) => onAdjustStepXStretch(s.address, s.xStretch + delta),
       },
       markerEnd: { type: s.style === 'return' ? MarkerType.Arrow : MarkerType.ArrowClosed },
     }));

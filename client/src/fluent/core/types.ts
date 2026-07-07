@@ -28,6 +28,12 @@ export interface StepNode {
   // fluent code (grammar has no layout/spacing) and not preserved across a
   // from-scratch code reparse (only survives diagram-driven edits).
   gapAfter?: number;
+  // UI-only horizontal controls: xShift moves the whole arrow sideways,
+  // xStretch extends its far end further out. Neither is encoded in
+  // generated code, and — unlike gapAfter — both mean the arrow may no
+  // longer touch the participant's lifeline exactly (accepted trade-off).
+  xShift?: number;
+  xStretch?: number;
 }
 
 export interface ConditionNode {

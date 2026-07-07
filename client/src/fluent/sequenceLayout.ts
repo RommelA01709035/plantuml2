@@ -12,6 +12,8 @@ export interface FlatStep {
   style: 'call' | 'return';
   y: number;
   gapAfter: number;
+  xShift: number;
+  xStretch: number;
 }
 
 export interface FlatSeparator {
@@ -67,7 +69,9 @@ export function computeSequenceLayout(model: DiagramModel): SequenceLayout {
         const y = cursorY;
         const style = node.style ?? 'call';
         const gapAfter = node.gapAfter ?? 0;
-        steps.push({ address: addr, from: node.from, to: node.to, message: node.message, style, y, gapAfter });
+        const xShift = node.xShift ?? 0;
+        const xStretch = node.xStretch ?? 0;
+        steps.push({ address: addr, from: node.from, to: node.to, message: node.message, style, y, gapAfter, xShift, xStretch });
 
         if (node.from !== node.to) {
           if (style === 'call') {

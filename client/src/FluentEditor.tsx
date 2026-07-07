@@ -16,6 +16,8 @@ import {
   deleteNode,
   moveNode,
   setStepGap,
+  setStepXShift,
+  setStepXStretch,
 } from './fluent/astOps';
 import ParticipantGraph from './ParticipantGraph';
 
@@ -71,7 +73,7 @@ function flowSignature(nodes: DiagramModel['flow']): string {
   return nodes
     .map((n) =>
       n.kind === 'step'
-        ? `s:${n.from}>${n.to}:${n.style ?? 'call'}:${n.gapAfter ?? 0}`
+        ? `s:${n.from}>${n.to}:${n.style ?? 'call'}:${n.gapAfter ?? 0}:${n.xShift ?? 0}:${n.xStretch ?? 0}`
         : n.kind === 'separator'
           ? 'sep'
           : `c(${flowSignature(n.thenBranch)}|${flowSignature(n.otherwiseBranch)})`,
@@ -199,6 +201,8 @@ export default function FluentEditor() {
               onDeleteStep={(address) => applyDiagramChange(deleteNode(ast, address))}
               onMoveStep={(address, direction) => applyDiagramChange(moveNode(ast, address, direction))}
               onAdjustStepGap={(address, gapAfter) => applyDiagramChange(setStepGap(ast, address, gapAfter))}
+              onAdjustStepXShift={(address, xShift) => applyDiagramChange(setStepXShift(ast, address, xShift))}
+              onAdjustStepXStretch={(address, xStretch) => applyDiagramChange(setStepXStretch(ast, address, xStretch))}
               onEditConditionLabel={(address, label) => applyDiagramChange(editConditionLabel(ast, address, label))}
               onDeleteCondition={(address) => applyDiagramChange(deleteNode(ast, address))}
               onAddStep={(branchAddress, from, to, message) => applyDiagramChange(addStep(ast, branchAddress, from, to, message))}

@@ -5,6 +5,7 @@ export default function Docs() {
         <div className="docs-toc-title">Contenido</div>
         <ol>
           <li><a href="#overview">Visión general</a></li>
+          <li><a href="#tipos">Tipos de diagrama</a></li>
           <li><a href="#empezar">Empezar</a></li>
           <li><a href="#componentes">Componentes</a></li>
           <li><a href="#pasos">Pasos y retornos</a></li>
@@ -15,6 +16,7 @@ export default function Docs() {
           <li><a href="#draw">draw()</a></li>
           <li><a href="#validaciones">Validaciones</a></li>
           <li><a href="#editor">Edición visual</a></li>
+          <li><a href="#ejemplos">Ejemplos</a></li>
           <li><a href="#limites">Límites conocidos</a></li>
         </ol>
       </nav>
@@ -46,6 +48,25 @@ export default function Docs() {
   .end()
   .theme("modern")
   .draw()`}</code></pre>
+        </section>
+
+        <section id="tipos">
+          <p className="docs-kicker">Alcance actual</p>
+          <h2>Qué diagramas se pueden usar</h2>
+          <p>La gramática está diseñada pa que <code>TipoDeDiagrama(nombre).uses().step().when().theme().draw()</code> sea el mismo patrón mental sin importar el tipo — pero hoy solo uno está implementado.</p>
+          <div className="docs-tbl-wrap">
+            <table>
+              <thead><tr><th>Tipo</th><th>Estado</th><th>Notas</th></tr></thead>
+              <tbody>
+                <tr><td><code>Sequence(name)</code></td><td className="docs-sev-ok">Disponible</td><td>Todo lo documentado en esta página. Es lo único que puedes escribir/dibujar ahorita.</td></tr>
+                <tr><td><code>Activity(name)</code></td><td className="docs-sev-pending">Planeado</td><td>Diagrama de actividad — <code>.lane()</code>, <code>.task()</code>, <code>.start()</code>/<code>.finish()</code>. No implementado.</td></tr>
+                <tr><td><code>ER(name)</code></td><td className="docs-sev-pending">Planeado</td><td>Entidad-relación — <code>.table()</code>, <code>.oneToMany()</code>. No implementado.</td></tr>
+                <tr><td><code>Package(name)</code></td><td className="docs-sev-pending">Planeado</td><td>Diagrama de paquetes — <code>.add()</code>, <code>.depends()</code>. No implementado.</td></tr>
+                <tr><td><code>Deployment(name)</code></td><td className="docs-sev-pending">Planeado</td><td>Diagrama de despliegue — <code>.node()</code>, <code>.link()</code>. No implementado.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="docs-muted">Si escribes <code>Activity(...)</code> hoy, <code>new Function</code> tira <code>ReferenceError: Activity is not defined</code> — solo <code>Sequence</code>, <code>actor</code>, <code>app</code>, <code>service</code>, <code>db</code>, <code>api</code>, <code>queue</code>, <code>storage</code> están inyectados al evaluar el código.</p>
         </section>
 
         <section id="empezar">
@@ -221,6 +242,44 @@ const Frontend = app("Frontend")
 
           <h3>Activation bars</h3>
           <p className="docs-muted">Barra vertical sobre la lifeline mientras un participante está "ocupado": se abre cuando recibe un <code>.step()</code> (llamada), se cierra cuando manda el <code>.return()</code> correspondiente (pila LIFO por participante). Lo que queda abierto se cierra al final del diagrama — versión simple, no contabiliza llamadas anidadas perfectamente.</p>
+        </section>
+
+        <section id="ejemplos">
+          <p className="docs-kicker">Código real</p>
+          <h2>El pipeline de esta misma app</h2>
+          <p>Este ejemplo no es genérico — documenta el flujo real de <code>FluentEditor → SequenceBuilder → ParticipantGraph</code> que ya viste funcionando. Úsalo pa probar <code>.return()</code>, self-call y <code>.separator()</code> juntos: pégalo en la pestaña <strong>Editor</strong>.</p>
+          <pre><code>{`Sequence("Fluent Diagram Grammar — pipeline interno")
+  .uses(
+    actor("Usuario"),
+    app("FluentEditor"),
+    service("runFluentCode"),
+    service("SequenceBuilder"),
+    service("computeSequenceLayout"),
+    app("ParticipantGraph"),
+    service("astOps"),
+    service("generateFluentCode")
+  )
+  .step("Usuario", "FluentEditor", "escribe código")
+  .step("FluentEditor", "runFluentCode", "runNow(code)")
+  .step("runFluentCode", "SequenceBuilder", "Sequence().uses().step()...draw()")
+  .return("SequenceBuilder", "runFluentCode", "{ ast, warnings }")
+  .return("runFluentCode", "FluentEditor", "setAst(ast)")
+  .step("FluentEditor", "computeSequenceLayout", "computeSequenceLayout(ast)")
+  .return("computeSequenceLayout", "FluentEditor", "steps + frames + activations")
+  .step("FluentEditor", "ParticipantGraph", "props (model, resetSignal++)")
+  .step("ParticipantGraph", "ParticipantGraph", "build nodes + edges")
+  .return("ParticipantGraph", "Usuario", "dibuja diagrama")
+  .separator("Usuario edita en el diagrama")
+  .step("Usuario", "ParticipantGraph", "drag / connect / +paso")
+  .step("ParticipantGraph", "astOps", "renameComponent() / addStep() / moveComponent()")
+  .return("astOps", "ParticipantGraph", "nuevo AST inmutable")
+  .step("ParticipantGraph", "FluentEditor", "onChange(nuevoAst)")
+  .step("FluentEditor", "generateFluentCode", "generateFluentCode(nuevoAst)")
+  .return("generateFluentCode", "FluentEditor", "código regenerado")
+  .return("FluentEditor", "Usuario", "textarea actualizado")
+  .theme("modern")
+  .draw()`}</code></pre>
+          <p className="docs-muted">Trae: <code>.step()</code> normal, <code>.return()</code> punteado, self-call (<code>ParticipantGraph → ParticipantGraph</code>) y <code>.separator()</code> — los 4 elementos que no salen en el ejemplo de <a href="#overview">Login</a> de arriba.</p>
         </section>
 
         <section id="limites">

@@ -301,18 +301,66 @@
 .rf-edge-label {
   position: absolute;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 4px;
-  background: var(--paper);
+  justify-content: center;
+  gap: 3px;
+  max-width: 220px;
+  background: color-mix(in srgb, var(--paper) 78%, transparent);
+  backdrop-filter: blur(1px);
   padding: 2px 4px;
   border-radius: 6px;
   font-size: 11.5px;
   pointer-events: all;
 }
 
+.rf-edge-label .inline-text,
+.rf-edge-label .inline-text-placeholder {
+  opacity: 0.72;
+}
+
+.rf-edge-label .inline-text:hover {
+  opacity: 1;
+}
+
 .rf-edge-label .icon-btn {
   width: 18px;
   height: 18px;
+}
+
+.rf-drag-grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 18px;
+  color: var(--ink-soft);
+  cursor: ew-resize;
+  touch-action: none;
+  border-radius: 4px;
+}
+
+.rf-drag-grip:hover {
+  color: var(--accent);
+  background: var(--paper-dim);
+}
+
+.rf-stretch-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--paper);
+  cursor: ew-resize;
+  touch-action: none;
+  pointer-events: all;
+  opacity: 0.6;
+  transition: opacity 120ms ease, transform 120ms var(--ease-out);
+}
+
+.rf-stretch-handle:hover {
+  opacity: 1;
 }
 
 /* ---- Diagram: condition ("alt" combined fragment), drawn inside the canvas ---- */
@@ -748,6 +796,16 @@
 .docs-sev-warn {
   color: var(--warn);
   font-weight: 700;
+}
+
+.docs-sev-ok {
+  color: #1a8a4a;
+  font-weight: 700;
+}
+
+.docs-sev-pending {
+  color: var(--ink-soft);
+  font-weight: 600;
 }
 
 .docs-callout {

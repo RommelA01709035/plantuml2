@@ -117,6 +117,20 @@ export function setStepGap(model: DiagramModel, address: Address, gapAfter: numb
   };
 }
 
+export function setStepXShift(model: DiagramModel, address: Address, xShift: number): DiagramModel {
+  return {
+    ...model,
+    flow: updateNodeAt(model.flow, address, (n) => (n.kind === 'step' ? { ...n, xShift } : n)),
+  };
+}
+
+export function setStepXStretch(model: DiagramModel, address: Address, xStretch: number): DiagramModel {
+  return {
+    ...model,
+    flow: updateNodeAt(model.flow, address, (n) => (n.kind === 'step' ? { ...n, xStretch: Math.max(0, xStretch) } : n)),
+  };
+}
+
 export function addStep(
   model: DiagramModel,
   branchAddress: Address,
