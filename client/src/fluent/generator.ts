@@ -1,7 +1,7 @@
 import type { DiagramModel, FlowNode } from './core/types';
 
 function escapeStr(s: string): string {
-  return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
 }
 
 function emitFlow(nodes: FlowNode[], labelOf: (id: string) => string, depth: number): string[] {
@@ -10,9 +10,12 @@ function emitFlow(nodes: FlowNode[], labelOf: (id: string) => string, depth: num
 
   for (const node of nodes) {
     if (node.kind === 'step') {
+      const method = node.style === 'return' ? 'return' : 'step';
       lines.push(
-        `${indent}.step("${escapeStr(labelOf(node.from))}", "${escapeStr(labelOf(node.to))}", "${escapeStr(node.message)}")`,
+        `${indent}.${method}("${escapeStr(labelOf(node.from))}", "${escapeStr(labelOf(node.to))}", "${escapeStr(node.message)}")`,
       );
+    } else if (node.kind === 'separator') {
+      lines.push(`${indent}.separator("${escapeStr(node.label)}")`);
     } else {
       lines.push(`${indent}.when("${escapeStr(node.label)}")`);
       lines.push(`${indent}  .then()`);

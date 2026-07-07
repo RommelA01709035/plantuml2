@@ -22,6 +22,8 @@ export interface StepNode {
   from: string;
   to: string;
   message: string;
+  // 'call' (solid arrow) is the default; 'return' renders dashed, UML-style.
+  style?: 'call' | 'return';
 }
 
 export interface ConditionNode {
@@ -31,7 +33,12 @@ export interface ConditionNode {
   otherwiseBranch: FlowNode[];
 }
 
-export type FlowNode = StepNode | ConditionNode;
+export interface SeparatorNode {
+  kind: 'separator';
+  label: string;
+}
+
+export type FlowNode = StepNode | ConditionNode | SeparatorNode;
 
 export type ThemeName = 'modern' | 'clean' | 'warm' | 'dark' | 'compact';
 

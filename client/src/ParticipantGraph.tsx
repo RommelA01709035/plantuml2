@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -7,6 +7,7 @@ import ReactFlow, {
   Position,
   applyEdgeChanges,
   applyNodeChanges,
+  useNodes,
   type Connection,
   type Edge,
   type EdgeChange,
@@ -14,13 +15,92 @@ import ReactFlow, {
   type NodeChange,
   type EdgeProps,
   type NodeProps,
-  getBezierPath,
   EdgeLabelRenderer,
   BaseEdge,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Trash } from '@phosphor-icons/react';
+import { Check, Plus, Trash, X } from '@phosphor-icons/react';
 import type { DiagramModel } from './fluent/core/types';
+import type { Address } from './fluent/astOps';
+import { computeSequenceLayout } from './fluent/sequenceLayout';
+
+// Sequence-diagram layout: participants sit in a fixed row (only X is
+// draggable, like sliding a lifeline sideways). Steps are drawn at a Y
+// determined by their ORDER, not by node position — that's what makes this
+// read as a sequence diagram instead of a free-form graph.
+const TOP_Y = 40;
+const COL_GAP = 220;
+const SELF_LOOP_W = 50;
+const SELF_LOOP_H = 30;
+
+const anchorId = (participantId: string) => `${participantId}__anchor`;
+const frameId = (addr: Address) => `frame-${addr.join('-')}`;
+const separatorId = (addr: Address) => `sep-${addr.join('-')}`;
+
+function EditableText({
+  value,
+  onCommit,
+  placeholder,
+  className,
+}: {
+  value: string;
+  onCommit: (v: string) => void;
+  placeholder?: string;
+  className?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+
+  useEffect(() => {
+    if (!editing) setDraft(value);
+  }, [value, editing]);
+
+  if (editing) {
+    return (
+      <input
+        className={`inline-edit ${className ?? ''}`}
+        autoFocus
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onFocus={(e) => e.currentTarget.select()}
+        onBlur={() => {
+          setEditing(false);
+          const trimmed = draft.trim();
+          if (trimmed && trimmed !== value) onCommit(trimmed);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') e.currentTarget.blur();
+          if (e.key === 'Escape') {
+            setDraft(value);
+            setEditing(false);
+          }
+        }}
+      />
+    );
+  }
+
+  return (
+    <button type="button" className={`inline-text ${className ?? ''}`} onClick={() => setEditing(true)}>
+      {value || <span className="inline-text-placeholder">{placeholder}</span>}
+    </button>
+  );
+}
+
+function IconBtn({ icon, label, onClick, danger }: { icon: React.ReactNode; label: string; onClick: () => void; danger?: boolean }) {
+  return (
+    <button type="button" className={`icon-btn ${danger ? 'icon-btn-danger' : ''}`} onClick={onClick} title={label} aria-label={label}>
+      {icon}
+    </button>
+  );
+}
+
+function useParticipantXRange(padding = 50): [number, number] {
+  const allNodes = useNodes();
+  const xs = allNodes.filter((n) => n.type === 'participant').map((n) => n.position.x);
+  if (xs.length === 0) return [0, 300];
+  const PARTICIPANT_BOX_W = 130;
+  return [Math.min(...xs) - padding, Math.max(...xs) + PARTICIPANT_BOX_W + padding];
+}
 
 interface ParticipantNodeData {
   label: string;
@@ -29,122 +109,235 @@ interface ParticipantNodeData {
 }
 
 function ParticipantNode({ id, data }: NodeProps<ParticipantNodeData>) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(data.label);
-
-  useEffect(() => {
-    if (!editing) setDraft(data.label);
-  }, [data.label, editing]);
-
   return (
     <div className="rf-participant">
       <Handle type="target" position={Position.Left} className="rf-handle" />
-      {editing ? (
+      <EditableText value={data.label} className="rf-participant-text" onCommit={(v) => data.onRename(id, v)} />
+      <IconBtn icon={<Trash size={12} weight="bold" />} label="Borrar participante" danger onClick={() => data.onDelete(id)} />
+      <Handle type="source" position={Position.Right} className="rf-handle" />
+    </div>
+  );
+}
+
+function AnchorNode() {
+  return <div className="rf-anchor" />;
+}
+
+interface FrameNodeData {
+  label: string;
+  dividerOffset: number;
+  height: number;
+  address: Address;
+  onEditLabel: (address: Address, label: string) => void;
+  onDelete: (address: Address) => void;
+  onAddStep: (branchAddress: Address, from: string, to: string, message: string) => void;
+  onAddCondition: (branchAddress: Address, label: string) => void;
+  components: DiagramModel['components'];
+}
+
+function FrameNode({ data }: NodeProps<FrameNodeData>) {
+  const [minX, maxX] = useParticipantXRange();
+
+  return (
+    <div className="rf-frame" style={{ transform: `translateX(${minX}px)`, width: maxX - minX, height: data.height }}>
+      <div className="rf-frame-tab">
+        <span className="rf-frame-tab-kind">alt</span>
+        <EditableText value={data.label} className="rf-frame-label" onCommit={(v) => data.onEditLabel(data.address, v)} />
+        <IconBtn icon={<Trash size={12} weight="bold" />} label="Borrar condición" danger onClick={() => data.onDelete(data.address)} />
+      </div>
+      <div className="rf-frame-divider" style={{ top: data.dividerOffset }}>
+        <span className="rf-frame-else-tag">si no</span>
+      </div>
+      <div className="rf-frame-controls" style={{ top: data.dividerOffset - 26 }}>
+        <FrameAddControls
+          components={data.components}
+          branchAddress={[...data.address, 'thenBranch']}
+          onAddStep={data.onAddStep}
+          onAddCondition={data.onAddCondition}
+        />
+      </div>
+      <div className="rf-frame-controls" style={{ top: data.height - 26 }}>
+        <FrameAddControls
+          components={data.components}
+          branchAddress={[...data.address, 'otherwiseBranch']}
+          onAddStep={data.onAddStep}
+          onAddCondition={data.onAddCondition}
+        />
+      </div>
+    </div>
+  );
+}
+
+interface SeparatorNodeData {
+  label: string;
+  address: Address;
+  onEditLabel: (address: Address, label: string) => void;
+  onDelete: (address: Address) => void;
+}
+
+function SeparatorNode({ data }: NodeProps<SeparatorNodeData>) {
+  const [minX, maxX] = useParticipantXRange();
+
+  return (
+    <div className="rf-separator" style={{ transform: `translateX(${minX}px)`, width: maxX - minX }}>
+      <span className="rf-separator-line" />
+      <span className="rf-separator-label-wrap">
+        <EditableText value={data.label} className="rf-separator-label" onCommit={(v) => data.onEditLabel(data.address, v)} />
+        <IconBtn icon={<Trash size={11} weight="bold" />} label="Borrar separador" danger onClick={() => data.onDelete(data.address)} />
+      </span>
+    </div>
+  );
+}
+
+function FrameAddControls({
+  components,
+  branchAddress,
+  onAddStep,
+  onAddCondition,
+}: {
+  components: DiagramModel['components'];
+  branchAddress: Address;
+  onAddStep: (branchAddress: Address, from: string, to: string, message: string) => void;
+  onAddCondition: (branchAddress: Address, label: string) => void;
+}) {
+  const [mode, setMode] = useState<'idle' | 'step' | 'condition'>('idle');
+  const [from, setFrom] = useState(components[0]?.id ?? '');
+  const [to, setTo] = useState(components[1]?.id ?? components[0]?.id ?? '');
+  const [message, setMessage] = useState('');
+  const [label, setLabel] = useState('');
+
+  if (components.length === 0) return null;
+
+  function reset() {
+    setMode('idle');
+    setMessage('');
+    setLabel('');
+  }
+
+  function commit() {
+    if (mode === 'step') onAddStep(branchAddress, from || components[0].id, to || components[0].id, message.trim() || 'paso');
+    else if (mode === 'condition') onAddCondition(branchAddress, label.trim() || 'condición');
+    reset();
+  }
+
+  if (mode === 'step') {
+    return (
+      <div className="diagram-add-form">
+        <select value={from} onChange={(e) => setFrom(e.target.value)} className="diagram-select">
+          {components.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+        <span className="diagram-add-arrow">&#8594;</span>
+        <select value={to} onChange={(e) => setTo(e.target.value)} className="diagram-select">
+          {components.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.label}
+            </option>
+          ))}
+        </select>
         <input
           autoFocus
-          className="inline-edit"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={() => {
-            setEditing(false);
-            const trimmed = draft.trim();
-            if (trimmed && trimmed !== data.label) data.onRename(id, trimmed);
-          }}
+          className="diagram-add-input"
+          placeholder="mensaje"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') e.currentTarget.blur();
-            if (e.key === 'Escape') {
-              setDraft(data.label);
-              setEditing(false);
-            }
+            if (e.key === 'Enter') commit();
+            if (e.key === 'Escape') reset();
           }}
         />
-      ) : (
-        <button type="button" className="inline-text rf-participant-text" onDoubleClick={() => setEditing(true)}>
-          {data.label}
-        </button>
-      )}
-      <button
-        type="button"
-        className="icon-btn icon-btn-danger rf-participant-delete"
-        title="Borrar participante"
-        onClick={() => data.onDelete(id)}
-      >
-        <Trash size={12} weight="bold" />
+        <IconBtn icon={<Check size={13} weight="bold" />} label="Agregar" onClick={commit} />
+        <IconBtn icon={<X size={13} weight="bold" />} label="Cancelar" onClick={reset} />
+      </div>
+    );
+  }
+
+  if (mode === 'condition') {
+    return (
+      <div className="diagram-add-form">
+        <input
+          autoFocus
+          className="diagram-add-input"
+          placeholder="condición"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commit();
+            if (e.key === 'Escape') reset();
+          }}
+        />
+        <IconBtn icon={<Check size={13} weight="bold" />} label="Agregar" onClick={commit} />
+        <IconBtn icon={<X size={13} weight="bold" />} label="Cancelar" onClick={reset} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="diagram-add-idle">
+      <button type="button" className="diagram-add-btn" onClick={() => setMode('step')}>
+        <Plus size={11} weight="bold" /> paso
       </button>
-      <Handle type="source" position={Position.Right} className="rf-handle" />
+      <button type="button" className="diagram-add-btn" onClick={() => setMode('condition')}>
+        <Plus size={11} weight="bold" /> condición
+      </button>
     </div>
   );
 }
 
 interface StepEdgeData {
   label: string;
+  rowY: number;
+  style: 'call' | 'return';
+  selfCall: boolean;
   onEditMessage: (id: string, message: string) => void;
   onDelete: (id: string) => void;
 }
 
-function StepEdge({ id, sourceX, sourceY, targetX, targetY, markerEnd, data }: EdgeProps<StepEdgeData>) {
-  const [path, labelX, labelY] = getBezierPath({ sourceX, sourceY, targetX, targetY });
+function StepEdge({ id, sourceX, targetX, markerEnd, data }: EdgeProps<StepEdgeData>) {
   const label = data?.label ?? '';
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(label);
+  const y = data?.rowY ?? 0;
+  const isReturn = data?.style === 'return';
+  const strokeDasharray = isReturn ? '6 4' : undefined;
 
-  useEffect(() => {
-    if (!editing) setDraft(label);
-  }, [label, editing]);
+  let path: string;
+  let labelX: number;
+  let labelY: number;
+
+  if (data?.selfCall) {
+    const x = sourceX;
+    path = `M ${x} ${y} L ${x + SELF_LOOP_W} ${y} L ${x + SELF_LOOP_W} ${y + SELF_LOOP_H} L ${x} ${y + SELF_LOOP_H}`;
+    labelX = x + SELF_LOOP_W / 2;
+    labelY = y;
+  } else {
+    const x2 = sourceX === targetX ? targetX + 60 : targetX;
+    path = `M ${sourceX} ${y} L ${x2} ${y}`;
+    labelX = (sourceX + x2) / 2;
+    labelY = y;
+  }
 
   return (
     <>
-      <BaseEdge id={id} path={path} markerEnd={markerEnd} style={{ stroke: 'var(--accent)', strokeWidth: 1.6 }} />
+      <BaseEdge id={id} path={path} markerEnd={markerEnd} style={{ stroke: 'var(--accent)', strokeWidth: 1.6, strokeDasharray }} />
       <EdgeLabelRenderer>
-        <div className="rf-edge-label" style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}>
-          {editing ? (
-            <input
-              autoFocus
-              className="inline-edit"
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onBlur={() => {
-                setEditing(false);
-                const trimmed = draft.trim();
-                if (trimmed && trimmed !== label) data?.onEditMessage(id, trimmed);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') e.currentTarget.blur();
-                if (e.key === 'Escape') {
-                  setDraft(label);
-                  setEditing(false);
-                }
-              }}
-            />
-          ) : (
-            <button type="button" className="inline-text" onDoubleClick={() => setEditing(true)}>
-              {label || <span className="inline-text-placeholder">mensaje...</span>}
-            </button>
-          )}
-          <button type="button" className="icon-btn icon-btn-danger" title="Borrar step" onClick={() => data?.onDelete(id)}>
-            <Trash size={11} weight="bold" />
-          </button>
+        <div className="rf-edge-label" style={{ transform: `translate(-50%, -100%) translate(${labelX}px, ${labelY}px)` }}>
+          <EditableText value={label} placeholder="mensaje..." onCommit={(v) => data?.onEditMessage(id, v)} />
+          <IconBtn icon={<Trash size={11} weight="bold" />} label="Borrar step" danger onClick={() => data?.onDelete(id)} />
         </div>
       </EdgeLabelRenderer>
     </>
   );
 }
 
-const nodeTypes = { participant: ParticipantNode };
+const nodeTypes = { participant: ParticipantNode, anchor: AnchorNode, frame: FrameNode, separator: SeparatorNode };
 const edgeTypes = { step: StepEdge };
 
-export type StepAddress = (number | 'thenBranch' | 'otherwiseBranch')[];
-
-export interface RootStep {
-  address: StepAddress;
-  from: string;
-  to: string;
-  message: string;
-}
+export type StepAddress = Address;
 
 interface Props {
   model: DiagramModel;
-  rootSteps: RootStep[];
   // Bump whenever the tree SHAPE changed (add/delete anywhere) so this canvas
   // rebuilds from the authoritative model. Pure edits (rename/move/message)
   // don't bump it and are applied optimistically in local state instead.
@@ -153,27 +346,18 @@ interface Props {
   onDeleteComponent: (id: string) => void;
   onMove: (id: string, x: number, y: number) => void;
   onConnect: (source: string, target: string) => void;
-  onEditStepMessage: (address: StepAddress, message: string) => void;
-  onDeleteStep: (address: StepAddress) => void;
-}
-
-function buildNodes(
-  model: DiagramModel,
-  onRename: ParticipantNodeData['onRename'],
-  onDelete: ParticipantNodeData['onDelete'],
-): Node<ParticipantNodeData>[] {
-  const cols = 3;
-  return model.components.map((c, i) => ({
-    id: c.id,
-    type: 'participant',
-    position: { x: c.x ?? (i % cols) * 220 + 40, y: c.y ?? Math.floor(i / cols) * 120 + 40 },
-    data: { label: c.label, onRename, onDelete },
-  }));
+  onEditStepMessage: (address: Address, message: string) => void;
+  onDeleteStep: (address: Address) => void;
+  onEditConditionLabel: (address: Address, label: string) => void;
+  onDeleteCondition: (address: Address) => void;
+  onAddStep: (branchAddress: Address, from: string, to: string, message: string) => void;
+  onAddCondition: (branchAddress: Address, label: string) => void;
+  onEditSeparatorLabel: (address: Address, label: string) => void;
+  onDeleteSeparator: (address: Address) => void;
 }
 
 export default function ParticipantGraph({
   model,
-  rootSteps,
   resetSignal,
   onRename,
   onDeleteComponent,
@@ -181,10 +365,15 @@ export default function ParticipantGraph({
   onConnect,
   onEditStepMessage,
   onDeleteStep,
+  onEditConditionLabel,
+  onDeleteCondition,
+  onAddStep,
+  onAddCondition,
+  onEditSeparatorLabel,
+  onDeleteSeparator,
 }: Props) {
-  const [nodes, setNodes] = useState<Node<ParticipantNodeData>[]>([]);
+  const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge<StepEdgeData>[]>([]);
-  const addressByEdgeId = useRef(new Map<string, StepAddress>());
 
   const handleRename = useCallback(
     (id: string, label: string) => {
@@ -194,41 +383,141 @@ export default function ParticipantGraph({
     [onRename],
   );
 
+  const handleEditConditionLabel = useCallback(
+    (address: Address, label: string) => {
+      setNodes((nds) => nds.map((n) => (n.id === frameId(address) ? { ...n, data: { ...n.data, label } } : n)));
+      onEditConditionLabel(address, label);
+    },
+    [onEditConditionLabel],
+  );
+
+  const handleEditSeparatorLabel = useCallback(
+    (address: Address, label: string) => {
+      setNodes((nds) => nds.map((n) => (n.id === separatorId(address) ? { ...n, data: { ...n.data, label } } : n)));
+      onEditSeparatorLabel(address, label);
+    },
+    [onEditSeparatorLabel],
+  );
+
   const handleEditStepMessage = useCallback(
-    (edgeId: string, message: string) => {
+    (edgeId: string, message: string, address: Address) => {
       setEdges((eds) => eds.map((e) => (e.id === edgeId ? { ...e, data: { ...e.data!, label: message } } : e)));
-      const addr = addressByEdgeId.current.get(edgeId);
-      if (addr) onEditStepMessage(addr, message);
+      onEditStepMessage(address, message);
     },
     [onEditStepMessage],
   );
 
   useEffect(() => {
-    setNodes(buildNodes(model, handleRename, onDeleteComponent));
-    const stepEdges: Edge<StepEdgeData>[] = rootSteps.map((s, i) => ({
-      id: `step-${i}`,
+    const layout = computeSequenceLayout(model);
+
+    const nextNodes: Node[] = [];
+    model.components.forEach((c, i) => {
+      const x = c.x ?? i * COL_GAP + 40;
+      nextNodes.push({
+        id: c.id,
+        type: 'participant',
+        position: { x, y: TOP_Y },
+        data: { label: c.label, onRename: handleRename, onDelete: onDeleteComponent },
+      });
+      nextNodes.push({
+        id: anchorId(c.id),
+        type: 'anchor',
+        position: { x, y: layout.bottomY },
+        data: {},
+        draggable: false,
+        selectable: false,
+        focusable: false,
+      });
+    });
+
+    layout.frames.forEach((f) => {
+      nextNodes.unshift({
+        id: frameId(f.address),
+        type: 'frame',
+        position: { x: 0, y: f.startY },
+        data: {
+          label: f.label,
+          dividerOffset: f.dividerY - f.startY,
+          height: f.endY - f.startY,
+          address: f.address,
+          onEditLabel: handleEditConditionLabel,
+          onDelete: onDeleteCondition,
+          onAddStep,
+          onAddCondition,
+          components: model.components,
+        },
+        draggable: false,
+        selectable: false,
+        focusable: false,
+      });
+    });
+
+    layout.separators.forEach((s) => {
+      nextNodes.push({
+        id: separatorId(s.address),
+        type: 'separator',
+        position: { x: 0, y: s.y - 12 },
+        data: { label: s.label, address: s.address, onEditLabel: handleEditSeparatorLabel, onDelete: onDeleteSeparator },
+        draggable: false,
+        selectable: false,
+        focusable: false,
+      });
+    });
+
+    setNodes(nextNodes);
+
+    const lifelineEdges: Edge[] = model.components.map((c) => ({
+      id: `lifeline-${c.id}`,
+      source: c.id,
+      target: anchorId(c.id),
+      type: 'straight',
+      selectable: false,
+      focusable: false,
+      interactionWidth: 0,
+      style: { stroke: 'var(--line)', strokeWidth: 1.5, strokeDasharray: '3 4' },
+    }));
+
+    const stepEdges: Edge<StepEdgeData>[] = layout.steps.map((s) => ({
+      id: `step-${s.address.join('-')}`,
       source: s.from,
       target: s.to,
       type: 'step',
-      data: { label: s.message, onEditMessage: handleEditStepMessage, onDelete: onDeleteStepEdge },
-      markerEnd: { type: MarkerType.ArrowClosed },
+      data: {
+        label: s.message,
+        rowY: s.y,
+        style: s.style,
+        selfCall: s.from === s.to,
+        onEditMessage: (edgeId: string, msg: string) => handleEditStepMessage(edgeId, msg, s.address),
+        onDelete: () => onDeleteStep(s.address),
+      },
+      markerEnd: { type: s.style === 'return' ? MarkerType.Arrow : MarkerType.ArrowClosed },
     }));
-    addressByEdgeId.current = new Map(stepEdges.map((e, i) => [e.id, rootSteps[i].address]));
-    setEdges(stepEdges);
 
-    function onDeleteStepEdge(edgeId: string) {
-      const addr = addressByEdgeId.current.get(edgeId);
-      if (addr) onDeleteStep(addr);
-    }
+    setEdges([...lifelineEdges, ...stepEdges]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetSignal]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
-      setNodes((nds) => applyNodeChanges(changes, nds));
+      // Participants only slide horizontally; their lifeline Y is locked at TOP_Y.
+      const adjusted = changes.map((c) =>
+        c.type === 'position' && c.position && !c.id.endsWith('__anchor')
+          ? { ...c, position: { x: c.position.x, y: TOP_Y } }
+          : c,
+      );
+      setNodes((nds) => {
+        const next = applyNodeChanges(adjusted, nds);
+        const byId = new Map(next.map((n) => [n.id, n]));
+        // Keep each anchor's X glued to its participant's X so the lifeline follows drag.
+        return next.map((n) =>
+          n.type === 'anchor'
+            ? { ...n, position: { x: byId.get(n.id.replace(/__anchor$/, ''))?.position.x ?? n.position.x, y: n.position.y } }
+            : n,
+        );
+      });
       for (const c of changes) {
-        if (c.type === 'position' && c.dragging === false && c.position) {
-          onMove(c.id, c.position.x, c.position.y);
+        if (c.type === 'position' && c.dragging === false && c.position && !c.id.endsWith('__anchor')) {
+          onMove(c.id, c.position.x, TOP_Y);
         }
       }
     },
@@ -259,6 +548,7 @@ export default function ParticipantGraph({
         onConnect={handleConnect}
         deleteKeyCode={null}
         fitView
+        fitViewOptions={{ padding: 0.2 }}
       >
         <Background gap={16} size={1} />
         <Controls showInteractive={false} />

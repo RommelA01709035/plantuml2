@@ -88,6 +88,8 @@ function walkFlow(nodes: FlowNode[], ctx: ValidationContext, warnings: Validatio
       continue;
     }
 
+    if (node.kind === 'separator') continue;
+
     const meta = ctx.conditionMeta.get(node);
     if (!meta?.thenCalled) {
       throw new DiagramValidationError({

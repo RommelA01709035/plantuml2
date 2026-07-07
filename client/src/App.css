@@ -193,11 +193,16 @@
 }
 
 .rf-canvas {
-  height: 380px;
+  height: 480px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--paper);
   overflow: hidden;
+}
+
+.rf-anchor {
+  width: 1px;
+  height: 1px;
 }
 
 .rf-canvas .react-flow__attribution {
@@ -251,101 +256,107 @@
   height: 18px;
 }
 
-/* ---- Diagram: condition tree (nested list) ---- */
+/* ---- Diagram: condition ("alt" combined fragment), drawn inside the canvas ---- */
 
-.cond-tree-wrap {
-  border-top: 1px solid var(--line);
-  padding-top: 14px;
+.rf-frame {
+  position: relative;
+  border: 1.5px dashed var(--accent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent) 4%, transparent);
+  pointer-events: none;
 }
 
-.cond-tree {
+.rf-frame-tab,
+.rf-frame-controls {
+  pointer-events: all;
+}
+
+.rf-frame-tab {
+  position: absolute;
+  top: -1.5px;
+  left: -1.5px;
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.cond-block {
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 10px 12px;
+  align-items: center;
+  gap: 6px;
   background: var(--paper);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  border: 1.5px solid var(--accent);
+  border-radius: 0 0 6px 0;
+  padding: 3px 8px;
 }
 
-.cond-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.cond-branch {
-  padding-left: 18px;
-  border-left: 2px solid var(--line);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.cond-branch-label {
-  font-size: 10.5px;
-  font-weight: 700;
+.rf-frame-tab-kind {
+  font-size: 10px;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--ink-soft);
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-radius: 4px;
+  padding: 1px 5px;
+  letter-spacing: 0.03em;
 }
 
-.cond-flow-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.cond-step-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.rf-frame-label {
   font-size: 12px;
-}
-
-.cond-step-from-to {
-  color: var(--ink-soft);
-  font-size: 11px;
-  white-space: nowrap;
-}
-
-.cond-step-message {
-  font-size: 12px;
-}
-
-.cond-step-row .icon-btn {
-  opacity: 0;
-}
-
-.cond-step-row:hover .icon-btn {
-  opacity: 1;
-}
-
-.diagram-condition-tag {
-  font-size: 10.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  padding: 2px 7px;
-  border-radius: var(--radius-pill);
-}
-
-.diagram-condition-tag-muted {
-  color: var(--ink-soft);
-  background: var(--paper-dim);
-}
-
-.diagram-condition-text {
-  font-size: 12.5px;
   font-weight: 600;
+}
+
+.rf-frame-divider {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1.5px dashed var(--accent);
+}
+
+.rf-frame-else-tag {
+  position: absolute;
+  top: 4px;
+  left: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ink-soft);
+  background: var(--paper);
+  padding: 0 4px;
+}
+
+.rf-frame-controls {
+  position: absolute;
+  right: 10px;
+}
+
+.rf-separator {
+  position: relative;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rf-separator-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 1.5px solid var(--ink-soft);
+}
+
+.rf-separator-label-wrap {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--paper);
+  padding: 0 10px;
+}
+
+.rf-separator-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ink-soft);
 }
 
 /* ---- Inline editable text ---- */
@@ -360,7 +371,9 @@
   cursor: text;
   transition: background-color 120ms ease, border-color 120ms ease;
   max-width: 100%;
-  white-space: nowrap;
+  white-space: pre-line;
+  line-height: 1.3;
+  text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -403,10 +416,10 @@
   flex-shrink: 0;
 }
 
-.cond-step-row:hover .icon-btn,
-.cond-header:hover .icon-btn,
+.rf-frame-tab:hover .icon-btn,
 .rf-participant:hover .icon-btn,
 .rf-edge-label:hover .icon-btn,
+.rf-separator-label-wrap:hover .icon-btn,
 .diagram-add-form .icon-btn {
   opacity: 1;
 }

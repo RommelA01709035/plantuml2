@@ -37,7 +37,7 @@ function esc(s: string): string {
 function measureRows(nodes: FlowNode[]): number {
   let rows = 0;
   for (const n of nodes) {
-    if (n.kind === 'step') {
+    if (n.kind === 'step' || n.kind === 'separator') {
       rows += 1;
     } else {
       rows += 1 + measureRows(n.thenBranch) + 1 + measureRows(n.otherwiseBranch);
@@ -86,11 +86,12 @@ export function renderSvg(model: DiagramModel): string {
     const x1 = colX.get(node.from) ?? LEFT_MARGIN;
     const x2 = colX.get(node.to) ?? LEFT_MARGIN;
     const y = cursorY;
+    const dash = node.style === 'return' ? ' stroke-dasharray="5,4"' : '';
     parts.push(
       `<text x="${(x1 + x2) / 2}" y="${y - 8}" text-anchor="middle" fill="${colors.text}" font-size="12">${esc(node.message)}</text>`,
     );
     parts.push(
-      `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="${colors.accent}" stroke-width="1.5" marker-end="url(#arrow)" />`,
+      `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="${colors.accent}" stroke-width="1.5"${dash} marker-end="url(#arrow)" />`,
     );
     cursorY += ROW_HEIGHT;
   }
@@ -99,6 +100,14 @@ export function renderSvg(model: DiagramModel): string {
     for (const node of nodes) {
       if (node.kind === 'step') {
         drawStep(node);
+      } else if (node.kind === 'separator') {
+        parts.push(
+          `<line x1="${LEFT_MARGIN - 60}" y1="${cursorY}" x2="${width - 20}" y2="${cursorY}" stroke="${colors.line}" stroke-width="1" />`,
+        );
+        parts.push(
+          `<text x="${width / 2}" y="${cursorY - 6}" text-anchor="middle" fill="${colors.text}" font-size="11" font-weight="bold">${esc(node.label)}</text>`,
+        );
+        cursorY += ROW_HEIGHT;
       } else {
         parts.push(
           `<text x="${LEFT_MARGIN - 80}" y="${cursorY - 20}" fill="${colors.accent}" font-size="12" font-weight="bold">alt: ${esc(node.label)}</text>`,

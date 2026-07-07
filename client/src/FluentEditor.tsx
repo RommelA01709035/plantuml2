@@ -8,11 +8,14 @@ import {
   deleteComponent,
   addComponent,
   addStep,
+  addCondition,
+  addSeparator,
   editStepMessage,
+  editConditionLabel,
+  editSeparatorLabel,
   deleteNode,
 } from './fluent/astOps';
-import ParticipantGraph, { type RootStep } from './ParticipantGraph';
-import ConditionTree from './ConditionTree';
+import ParticipantGraph from './ParticipantGraph';
 
 const DEFAULT_CODE = `Sequence("Login")
   .uses(
@@ -78,14 +81,6 @@ function mergePositions(parsed: DiagramModel, prev: DiagramModel): DiagramModel 
   };
 }
 
-function collectRootSteps(model: DiagramModel): RootStep[] {
-  const steps: RootStep[] = [];
-  model.flow.forEach((n, i) => {
-    if (n.kind === 'step') steps.push({ address: [i], from: n.from, to: n.to, message: n.message });
-  });
-  return steps;
-}
-
 export default function FluentEditor() {
   const initial = runFluentCode(DEFAULT_CODE);
   const [code, setCode] = useState(DEFAULT_CODE);
@@ -139,8 +134,6 @@ export default function FluentEditor() {
     setCode(generateFluentCode(updated));
   };
 
-  const rootSteps = collectRootSteps(ast);
-
   return (
     <div className="app-body">
       <div className="pane pane-code">
@@ -176,13 +169,14 @@ export default function FluentEditor() {
         <div className="pane-toolbar">
           <span className="pane-label">Diagrama</span>
           <div className="spacer" />
+          <AddRootCondition model={ast} onChange={applyDiagramChange} />
+          <AddRootSeparator model={ast} onChange={applyDiagramChange} />
           <AddParticipant model={ast} onChange={applyDiagramChange} />
         </div>
         <div className="pane-content">
           <div className="diagram-scroll">
             <ParticipantGraph
               model={ast}
-              rootSteps={rootSteps}
               resetSignal={graphReset}
               onRename={(id, label) => applyDiagramChange(renameComponent(ast, id, label))}
               onDeleteComponent={(id) => applyDiagramChange(deleteComponent(ast, id))}
@@ -190,10 +184,13 @@ export default function FluentEditor() {
               onConnect={(source, target) => applyDiagramChange(addStep(ast, [], source, target, 'nuevo paso'))}
               onEditStepMessage={(address, message) => applyDiagramChange(editStepMessage(ast, address, message))}
               onDeleteStep={(address) => applyDiagramChange(deleteNode(ast, address))}
+              onEditConditionLabel={(address, label) => applyDiagramChange(editConditionLabel(ast, address, label))}
+              onDeleteCondition={(address) => applyDiagramChange(deleteNode(ast, address))}
+              onAddStep={(branchAddress, from, to, message) => applyDiagramChange(addStep(ast, branchAddress, from, to, message))}
+              onAddCondition={(branchAddress, label) => applyDiagramChange(addCondition(ast, branchAddress, label))}
+              onEditSeparatorLabel={(address, label) => applyDiagramChange(editSeparatorLabel(ast, address, label))}
+              onDeleteSeparator={(address) => applyDiagramChange(deleteNode(ast, address))}
             />
-            <div className="cond-tree-wrap">
-              <ConditionTree model={ast} onChange={applyDiagramChange} />
-            </div>
           </div>
           {warnings.length > 0 && (
             <div className="error-banner error-banner-warning">
@@ -251,6 +248,100 @@ function AddParticipant({ model, onChange }: { model: DiagramModel; onChange: (m
         autoFocus
         className="diagram-add-input"
         placeholder="nombre"
+        value={label}
+        onChange={(e) => setLabel(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') commit();
+          if (e.key === 'Escape') reset();
+        }}
+      />
+      <button type="button" className="icon-btn" title="Agregar" onClick={commit}>
+        <Check size={13} weight="bold" />
+      </button>
+      <button type="button" className="icon-btn" title="Cancelar" onClick={reset}>
+        <X size={13} weight="bold" />
+      </button>
+    </div>
+  );
+}
+
+function AddRootCondition({ model, onChange }: { model: DiagramModel; onChange: (m: DiagramModel) => void }) {
+  const [open, setOpen] = useState(false);
+  const [label, setLabel] = useState('');
+
+  function reset() {
+    setOpen(false);
+    setLabel('');
+  }
+
+  function commit() {
+    const trimmed = label.trim();
+    if (!trimmed) return reset();
+    onChange(addCondition(model, [], trimmed));
+    reset();
+  }
+
+  if (!open) {
+    return (
+      <button type="button" className="diagram-add-btn" onClick={() => setOpen(true)}>
+        <Plus size={12} weight="bold" /> condición
+      </button>
+    );
+  }
+
+  return (
+    <div className="diagram-add-form">
+      <input
+        autoFocus
+        className="diagram-add-input"
+        placeholder="condición"
+        value={label}
+        onChange={(e) => setLabel(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') commit();
+          if (e.key === 'Escape') reset();
+        }}
+      />
+      <button type="button" className="icon-btn" title="Agregar" onClick={commit}>
+        <Check size={13} weight="bold" />
+      </button>
+      <button type="button" className="icon-btn" title="Cancelar" onClick={reset}>
+        <X size={13} weight="bold" />
+      </button>
+    </div>
+  );
+}
+
+function AddRootSeparator({ model, onChange }: { model: DiagramModel; onChange: (m: DiagramModel) => void }) {
+  const [open, setOpen] = useState(false);
+  const [label, setLabel] = useState('');
+
+  function reset() {
+    setOpen(false);
+    setLabel('');
+  }
+
+  function commit() {
+    const trimmed = label.trim();
+    if (!trimmed) return reset();
+    onChange(addSeparator(model, [], trimmed));
+    reset();
+  }
+
+  if (!open) {
+    return (
+      <button type="button" className="diagram-add-btn" onClick={() => setOpen(true)}>
+        <Plus size={12} weight="bold" /> separador
+      </button>
+    );
+  }
+
+  return (
+    <div className="diagram-add-form">
+      <input
+        autoFocus
+        className="diagram-add-input"
+        placeholder="== texto =="
         value={label}
         onChange={(e) => setLabel(e.target.value)}
         onKeyDown={(e) => {

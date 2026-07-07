@@ -4,6 +4,7 @@ import type {
   DiagramModel,
   DrawResult,
   FlowNode,
+  SeparatorNode,
   StepNode,
   ThemeName,
 } from '../core/types.js';
@@ -79,7 +80,28 @@ export class SequenceBuilder {
       from: this.resolveRef(from),
       to: this.resolveRef(to),
       message,
+      style: 'call',
     };
+    this.currentArray().push(node);
+    return this;
+  }
+
+  // UML "return" message: dashed arrow, callee -> caller.
+  return(from: Ref, to: Ref, message: string): this {
+    const node: StepNode = {
+      kind: 'step',
+      from: this.resolveRef(from),
+      to: this.resolveRef(to),
+      message,
+      style: 'return',
+    };
+    this.currentArray().push(node);
+    return this;
+  }
+
+  // PlantUML-style "== label ==" divider.
+  separator(label: string): this {
+    const node: SeparatorNode = { kind: 'separator', label };
     this.currentArray().push(node);
     return this;
   }

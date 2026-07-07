@@ -1,4 +1,4 @@
-import type { ComponentDefinition, ConditionNode, DiagramModel, FlowNode, StepNode } from './core/types';
+import type { ComponentDefinition, ConditionNode, DiagramModel, FlowNode, SeparatorNode, StepNode } from './core/types';
 
 // An Address locates a node inside the nested flow tree.
 // [2] -> rootFlow[2]
@@ -93,14 +93,33 @@ export function deleteNode(model: DiagramModel, address: Address): DiagramModel 
   return { ...model, flow: deleteNodeAt(model.flow, address) };
 }
 
-export function addStep(model: DiagramModel, branchAddress: Address, from: string, to: string, message: string): DiagramModel {
-  const step: StepNode = { kind: 'step', from, to, message };
+export function addStep(
+  model: DiagramModel,
+  branchAddress: Address,
+  from: string,
+  to: string,
+  message: string,
+  style: 'call' | 'return' = 'call',
+): DiagramModel {
+  const step: StepNode = { kind: 'step', from, to, message, style };
   return { ...model, flow: appendNodeAt(model.flow, branchAddress, step) };
 }
 
 export function addCondition(model: DiagramModel, branchAddress: Address, label: string): DiagramModel {
   const condition: ConditionNode = { kind: 'condition', label, thenBranch: [], otherwiseBranch: [] };
   return { ...model, flow: appendNodeAt(model.flow, branchAddress, condition) };
+}
+
+export function addSeparator(model: DiagramModel, branchAddress: Address, label: string): DiagramModel {
+  const node: SeparatorNode = { kind: 'separator', label };
+  return { ...model, flow: appendNodeAt(model.flow, branchAddress, node) };
+}
+
+export function editSeparatorLabel(model: DiagramModel, address: Address, label: string): DiagramModel {
+  return {
+    ...model,
+    flow: updateNodeAt(model.flow, address, (n) => (n.kind === 'separator' ? { ...n, label } : n)),
+  };
 }
 
 function filterFlowByComponent(nodes: FlowNode[], removedId: string): FlowNode[] {
