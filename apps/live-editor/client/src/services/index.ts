@@ -1,2 +1,2 @@
-export * from "./DiagramService";
+export * from "./DocumentService";
 export * from "./RendererService";
