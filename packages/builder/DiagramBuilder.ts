@@ -1,6 +1,15 @@
 import { Diagram, Node } from "../core";
 import { NodeBuilder } from "./NodeBuilder"
 
+/**
+ * Builder class for constructing a Diagram object.
+ * 
+ * @remarks
+ * This class provides a fluent interface for creating a Diagram and its associated Nodes.
+ * It allows for the addition of nodes to the diagram and ultimately builds the complete Diagram object.
+ * 
+ * @public
+ */
 export class DiagramBuilder {
     private readonly diagram: Diagram;
 

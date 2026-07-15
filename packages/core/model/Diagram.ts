@@ -47,4 +47,11 @@ export class Diagram {
     getNode(id: string): Node | undefined {
         return this._nodes.find(node => node.id === id);
     }
+
+    /**
+     * Returns all nodes in the diagram. 
+     */
+    getNodes(): Node[] {
+        return this._nodes;
+    }
 }
