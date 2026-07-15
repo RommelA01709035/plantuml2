@@ -26,4 +26,20 @@ export class Node {
         this.visible = true;
         this.locked = false;
     }
+
+    /**
+     * Sets the position of the node.
+     */
+    setPosition(x: number, y: number): void {
+        this.position.x = x;
+        this.position.y = y;
+    }
+
+    /**
+     * Sets the size of the node.
+     */
+    setSize(width: number, height: number): void {
+        this.size.width = width;
+        this.size.height = height;
+    }
 }
