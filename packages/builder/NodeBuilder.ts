@@ -11,10 +11,13 @@ import { DiagramBuilder } from "./DiagramBuilder";
  * @public
  */
 export class NodeBuilder {
-    constructor(
-        private readonly diagramBuilder: DiagramBuilder,
-        private readonly node: Node
-    ) {}
+    private readonly diagramBuilder: DiagramBuilder;
+    private readonly node: Node;
+
+    constructor(diagramBuilder: DiagramBuilder, node: Node) {
+        this.diagramBuilder = diagramBuilder;
+        this.node = node;
+    }
 
     position(x: number, y: number): this {
         this.node.setPosition(x, y);
