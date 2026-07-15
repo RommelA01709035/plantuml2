@@ -11,10 +11,11 @@ import { Point, Size } from '../geometry';
 export class Node {
     readonly id: string;
     name: string;
-    label?: string;
     kind: string;
     position: Point;
     size: Size;
+    visible: boolean;
+    locked: boolean;
 
     constructor(id: string, name: string, kind: string = "node") {
         this.id = id;
@@ -22,5 +23,7 @@ export class Node {
         this.kind = kind;
         this.position = new Point();
         this.size = new Size();
+        this.visible = true;
+        this.locked = false;
     }
 }
