@@ -25,15 +25,10 @@ export function EditorPage() {
     const editorService = useMemo(() => new EditorService(), []);
 
     /**
-     * Diagram generated from the current source.
+     * Result generated from the current source.
      */
-    const diagram = useMemo(() => {
-        try {
-            return editorService.updateSource(source);
-        } catch (error) {
-            console.error("Error parsing source code:", error);
-            return null;
-        }
+    const editorResult = useMemo(() => {
+        return editorService.updateSource(source);
     }, [source, editorService]);
 
     return (
@@ -44,11 +39,11 @@ export function EditorPage() {
                 onChange={setSource}
             />
 
-            {diagram ? (
+            {editorResult.diagram && (
                 <DiagramCanvas
-                    diagram={diagram}
+                    diagram={editorResult.diagram}
                 />
-            ) : null}
+            )}
 
         </main>
     );

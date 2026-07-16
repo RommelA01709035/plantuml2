@@ -1,5 +1,5 @@
-import { Diagram } from "../../../../../packages/core";
 import { Parser } from "../../../../../packages/parser";
+import type { EditorResult } from "./types/EditorResult";
 
 /**
  * Service responsible for managing the editor state and interactions.
@@ -12,7 +12,7 @@ import { Parser } from "../../../../../packages/parser";
  */
 export class EditorService {
     private readonly parser: Parser;
-    
+
     constructor() {
         this.parser = new Parser();
     }
@@ -23,7 +23,17 @@ export class EditorService {
      * @param source - The source code for the diagram.
      * @returns The built diagram.
      */
-    updateSource(source: string): Diagram {
-        return this.parser.parse(source);
+    updateSource(source: string): EditorResult {
+        try {
+            return {
+                diagram: this.parser.parse(source),
+                errors: []
+            };
+        } catch (error) {
+            return {
+                diagram: null,
+                errors: [error as Error]
+            };
+        }
     }
 }
