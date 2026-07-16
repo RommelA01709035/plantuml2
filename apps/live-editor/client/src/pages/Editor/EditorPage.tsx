@@ -1,7 +1,6 @@
 import "./EditorPage.css";
 
 import { Toolbar } from "../../components/Toolbar";
-import { Sidebar } from "../../components/Sidebar";
 import { DiagramCanvas } from "../../components/DiagramCanvas";
 import { PropertiesPanel } from "../../components/PropertiesPanel";
 import { StatusBar } from "../../components/StatusBar";
@@ -20,8 +19,6 @@ export function EditorPage() {
             <Toolbar />
 
             <main className="editor-main">
-
-                <Sidebar />
 
                 <DiagramCanvas
                     diagram={diagram}
