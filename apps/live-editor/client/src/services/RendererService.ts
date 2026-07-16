@@ -1,5 +1,5 @@
 import { Diagram } from "../../../../../packages/core";
-import { SvgRenderer } from "../../../../../packages/renderer-svg";
+import { SvgRenderer } from "../../../../../packages/renderers/renderer-svg";
 
 /**
  * Service for rendering diagrams
