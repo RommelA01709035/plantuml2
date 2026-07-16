@@ -44,9 +44,7 @@ export function Editor({ value, onChange }: EditorProps) {
           spellCheck={false}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          placeholder={`class User 
-                        class Product 
-                        User --> Product`}
+          placeholder={`class User\nclass Product\nUser --> Product`}
       />
 
     </section>

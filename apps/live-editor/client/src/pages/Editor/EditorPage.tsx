@@ -3,7 +3,7 @@ import "./EditorPage.css";
 import { useMemo, useState } from "react";
 import { DiagramCanvas } from "../../components/DiagramCanvas";
 import { Editor } from "../../components/Editor";
-import { Parser } from "../../../../../../packages/parser";
+import { EditorService } from "../../services/EditorService";
 
 /**
  * Main page of the Live editor.
@@ -22,19 +22,19 @@ export function EditorPage() {
     /**
      * Single parser instance.
      */
-    const parser = useMemo(() => new Parser(), []);
+    const editorService = useMemo(() => new EditorService(), []);
 
     /**
      * Diagram generated from the current source.
      */
     const diagram = useMemo(() => {
         try {
-            return parser.parse(source);
+            return editorService.updateSource(source);
         } catch (error) {
             console.error("Error parsing source code:", error);
             return null;
         }
-    }, [source, parser]);
+    }, [source, editorService]);
 
     return (
         <main className="editor-page">
