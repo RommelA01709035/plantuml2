@@ -1,35 +1,55 @@
 import "./EditorPage.css";
 
-import { Toolbar } from "../../components/Toolbar";
+import { useMemo, useState } from "react";
 import { DiagramCanvas } from "../../components/DiagramCanvas";
-import { PropertiesPanel } from "../../components/PropertiesPanel";
-import { StatusBar } from "../../components/StatusBar";
+import { Editor } from "../../components/Editor";
+import { Parser } from "../../../../../../packages/parser";
 
-import { DocumentService } from "../../services";
-
-const documentService = new DocumentService();
-
+/**
+ * Main page of the Live editor.
+ * 
+ * @remarks
+ * This component coordinates the editor and the canvas.
+ *
+ * @public
+ */
 export function EditorPage() {
+    /**
+     * Source code written by the user.
+     */
+    const [source, setSource] = useState(`User Product Order`);
 
-    const diagram = documentService.createExampleDiagram();
+    /**
+     * Single parser instance.
+     */
+    const parser = useMemo(() => new Parser(), []);
+
+    /**
+     * Diagram generated from the current source.
+     */
+    const diagram = useMemo(() => {
+        try {
+            return parser.parse(source);
+        } catch (error) {
+            console.error("Error parsing source code:", error);
+            return null;
+        }
+    }, [source, parser]);
 
     return (
-        <div className="editor">
+        <main className="editor-page">
 
-            <Toolbar />
+            <Editor
+                value={source}
+                onChange={setSource}
+            />
 
-            <main className="editor-main">
-
+            {diagram ? (
                 <DiagramCanvas
                     diagram={diagram}
                 />
+            ) : null}
 
-                <PropertiesPanel />
-
-            </main>
-
-            <StatusBar />
-
-        </div>
+        </main>
     );
 }

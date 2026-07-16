@@ -1,11 +1,5 @@
-.editor {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-}
-
-.editor-main {
+.editor-page {
     display: grid;
-    grid-template-columns: 220px 1fr 260px;
-    flex: 1;
+    grid-template-columns: 1fr 1fr;
+    height: 100vh;
 }
