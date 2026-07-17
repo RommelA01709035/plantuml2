@@ -1,6 +1,7 @@
 import { Node } from "./Node";
 import { Edge } from "./Edge";
 import { Label } from "./Label";
+import { Group } from "./Group";
 
 /**
  * Represents a complete diagram.
@@ -17,6 +18,7 @@ export class Diagram {
     private readonly _nodes: Node[];
     private readonly _edges: Edge[];
     private readonly _labels: Label[];
+    private readonly _groups: Group[];
 
     constructor(id: string, name: string = "Untitled diagram"){
         this.id = id;
@@ -24,6 +26,7 @@ export class Diagram {
         this._nodes = [];
         this._edges = [];
         this._labels = [];
+        this._groups = [];
     } 
 
     /**
@@ -209,11 +212,68 @@ export class Diagram {
     }
 
     /**
+     * Returns a group by its identifier.
+     * @param id - The identifier of the group to be retrieved.
+     * @returns The group if found, undefined otherwise.
+     */
+    getGroup(id: string): Group | undefined {
+        return this._groups.find(group => group.id === id);
+    }
+
+    /**
+     * Returns all groups in the diagram.
+     * @returns The array of groups.
+     */
+    getGroups(): readonly Group[] {
+        return [...this._groups];
+    }
+
+    /**
+     * Returns the number of groups in the diagram.
+     * @returns The number of groups in the diagram.
+     */
+    get groupCount(): number {
+        return this._groups.length;
+    }
+
+    /**
+     * Adds a group to the diagram.
+     * @param group - The group to be added to the diagram.
+     */
+    addGroup(group: Group): void {
+        this._groups.push(group);
+    }
+
+    /**
+     * Removes a group from the diagram.
+     * @param id - The ID of the group to be removed.
+     * @returns True if the group was removed, false otherwise.
+     */
+    removeGroup(id: string): boolean {
+        const index = this._groups.findIndex(group => group.id === id);
+        if(index === -1){
+            return false;
+        }
+        this._groups.splice(index, 1);
+        return true;
+    }
+
+    /**
+     * Checks if the diagram contains a group with the specified ID.
+     * @param id - The ID of the group to check for.
+     * @returns True if the group exists, false otherwise.
+     */
+    containsGroup(id: string): boolean {
+        return this._groups.some(group => group.id === id);
+    }
+
+    /**
      * Clears the diagram by removing all nodes, edges, and labels.
      */
     clear(): void {
         this._nodes.length = 0;
         this._edges.length = 0;
         this._labels.length = 0;
+        this._groups.length = 0;
     }
 }
