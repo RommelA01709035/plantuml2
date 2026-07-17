@@ -42,4 +42,12 @@ export class Node {
         this.size.width = width;
         this.size.height = height;
     }
+
+    setVisible(visible: boolean): void {
+        this.visible = visible;
+    }
+
+    setLocked(locked: boolean): void {
+        this.locked = locked;
+    }
 }
