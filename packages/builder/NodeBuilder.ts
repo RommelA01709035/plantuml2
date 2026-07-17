@@ -29,6 +29,26 @@ export class NodeBuilder {
         return this;
     }
 
+    show(): this {
+        this.node.setVisible(true);
+        return this;
+    }
+
+    hide(): this {
+        this.node.setVisible(false);
+        return this;
+    }
+
+    lock(): this {
+        this.node.setLocked(true);
+        return this;
+    }
+
+    unlock(): this {
+        this.node.setLocked(false);
+        return this;
+    }
+
     end(): DiagramBuilder {
         return this.diagramBuilder;
     }
