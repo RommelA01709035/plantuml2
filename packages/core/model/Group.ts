@@ -13,8 +13,8 @@ export class Group {
     kind: string;
     position: Point;
     size: Size;
-    visible: boolean;
-    blocked: boolean;
+    visible: boolean = true;
+    locked: boolean = false;
     private readonly _nodeIds: string[];
     private readonly _groupIds: string[];
 
@@ -24,8 +24,6 @@ export class Group {
         this.kind = kind;
         this.position = new Point();
         this.size = new Size();
-        this.visible = true;
-        this.blocked = false;
         this._nodeIds = [];
         this._groupIds = [];
     }
@@ -94,5 +92,29 @@ export class Group {
         }
         this._groupIds.splice(index, 1);
         return true;
+    }
+
+    /**
+     * Sets the position of the group.
+     */
+    setPosition(x: number, y: number): void {
+        this.position.x = x;
+        this.position.y = y;
+    }
+
+    /**
+     * Sets the size of the group.
+     */
+    setSize(width: number, height: number): void {
+        this.size.width = width;
+        this.size.height = height;
+    }
+
+    setVisible(visible: boolean): void {
+        this.visible = visible;
+    }
+
+    setLocked(locked: boolean): void {
+        this.locked = locked;
     }
 }
