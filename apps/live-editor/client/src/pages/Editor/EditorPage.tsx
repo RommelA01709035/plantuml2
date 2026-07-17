@@ -17,7 +17,7 @@ export function EditorPage() {
     /**
      * Source code written by the user.
      */
-    const [source, setSource] = useState(`User Product Order`);
+    const [source, setSource] = useState(`User.node("My Node")\nProduct.node("My Product")`);
 
     /**
      * Single parser instance.

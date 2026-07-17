@@ -1,4 +1,4 @@
-import { Parser } from "../../../../../packages/parser";
+import { Interpreter } from "../../../../../packages/interpreter";
 import type { EditorResult } from "./types/EditorResult";
 
 /**
@@ -11,10 +11,10 @@ import type { EditorResult } from "./types/EditorResult";
  * @public
  */
 export class EditorService {
-    private readonly parser: Parser;
+    private readonly interpreter: Interpreter;
 
     constructor() {
-        this.parser = new Parser();
+        this.interpreter = new Interpreter();
     }
 
     /**
@@ -26,7 +26,7 @@ export class EditorService {
     updateSource(source: string): EditorResult {
         try {
             return {
-                diagram: this.parser.parse(source),
+                diagram: this.interpreter.parse(source),
                 errors: []
             };
         } catch (error) {
