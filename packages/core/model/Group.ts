@@ -42,7 +42,7 @@ export class Group {
      * Adds a node ID to the group.
      * @param nodeId - The ID of the node to be added to the group.
      */
-    addNode(nodeId: string): void {
+    attachNode(nodeId: string): void {
         if (!this._nodeIds.includes(nodeId)) {
             this._nodeIds.push(nodeId);
         }
@@ -52,7 +52,7 @@ export class Group {
      * Removes a node ID from the group.
      * @param nodeId - The ID of the node to be removed from the group.
      */
-    removeNode(nodeId: string): boolean {
+    detachNode(nodeId: string): boolean {
         const index = this._nodeIds.indexOf(nodeId);
         if (index === -1) {
             return false;
@@ -76,7 +76,7 @@ export class Group {
      * This method allows for the creation of nested groups by adding a group ID to another group.
      * If the group ID already exists in the group, it will not be added again.
      */
-    addGroup(groupId: string): void {
+    attachGroup(groupId: string): void {
         if (!this._groupIds.includes(groupId)) {
             this._groupIds.push(groupId);
         }
@@ -87,7 +87,7 @@ export class Group {
      * @param groupId - The ID of the group to be removed from the group.
      * @returns True if the group ID was removed, false otherwise.
      */
-    removeGroup(groupId: string): boolean {
+    detachGroup(groupId: string): boolean {
         const index = this._groupIds.indexOf(groupId);
         if (index === -1) {
             return false;
