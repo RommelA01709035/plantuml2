@@ -27,27 +27,6 @@ export class Diagram {
     } 
 
     /**
-     * Adds a node to the diagram.
-     * 
-     * @param node - The node to be added to the diagram.
-     */
-    addNode(node: Node): void {
-        this._nodes.push(node);
-    }
-
-    /**
-     * Removes a Node from the diagram
-     */
-    removeNode(id: string): boolean {
-        const index = this._nodes.findIndex(node => node.id === id);
-        if(index === -1){
-            return false;
-        }
-        this._nodes.splice(index, 1);
-        return true;
-    }
-
-    /**
      * Returns a node by its identifier
      */
     getNode(id: string): Node | undefined {
@@ -61,27 +40,55 @@ export class Diagram {
         return this._nodes;
     }
 
-    /**
-     * Adds an edge to the diagram
-     * 
-     * @param edge - The edge to be added to the diagram.
-     */
-    addEdge(edge: Edge): void {
-        this._edges.push(edge);
+    get nodeCount(): number {
+        return this._nodes.length;
     }
 
     /**
-     * Removes an edge from the diagram
-     * @param id - The identifier of the edge to be removed.
-     * @returns True if the edge was removed, false otherwise.
+     * Adds a node to the diagram.
+     * 
+     * @param node - The node to be added to the diagram.
      */
-    removeEdge(id: string): boolean {
-        const index = this._edges.findIndex(edge => edge.id === id);
+    addNode(node: Node): void {
+        this._nodes.push(node);
+    }
+
+    /**
+     * Removes a Node from the diagram
+     * 
+     * @remarks
+     * This method removes a node from the diagram by its identifier.
+     * It also removes any edges that are connected to the node being removed.
+     * 
+     * @param id - The identifier of the node to be removed.
+     * @returns True if the node was removed, false otherwise.
+     */
+    removeNode(id: string): boolean {
+        const index = this._nodes.findIndex(node => node.id === id);
         if(index === -1){
             return false;
         }
-        this._edges.splice(index, 1);
+        this._nodes.splice(index, 1);
+
+        for (let i = this._edges.length - 1; i >= 0; i--) {
+            const edge = this._edges[i];
+            if (
+                edge.source === id ||
+                edge.target === id
+            ) {
+                this._edges.splice(i, 1);
+            }
+        }
         return true;
+    }
+
+    /**
+     * Checks if the diagram contains a node with the specified ID.
+     * @param id - The ID of the node to check for.
+     * @returns True if the node exists, false otherwise.
+     */
+    containsNode(id: string): boolean {
+        return this._nodes.some(node => node.id === id);
     }
 
     /**
@@ -99,6 +106,75 @@ export class Diagram {
      */
     getEdges(): Edge[] {
         return this._edges;
+    }
+
+    /**
+     * Adds an edge to the diagram
+     * 
+     * @param edge - The edge to be added to the diagram.
+     */
+    addEdge(edge: Edge): void {
+        this._edges.push(edge);
+    }
+
+    get edgeCount(): number {
+        return this._edges.length;
+    }
+
+    /**
+     * Removes an edge from the diagram
+     * @param id - The identifier of the edge to be removed.
+     * @returns True if the edge was removed, false otherwise.
+     */
+    removeEdge(id: string): boolean {
+        const index = this._edges.findIndex(edge => edge.id === id);
+        if(index === -1){
+            return false;
+        }
+        this._edges.splice(index, 1);
+        return true;
+    }
+
+    /**
+     * Checks if the diagram contains an edge with the specified ID.
+     * @param id - The ID of the edge to check for.
+     * @returns True if the edge exists, false otherwise.
+     */
+    containsEdge(id: string): boolean {
+        return this._edges.some(edge => edge.id === id);
+    }
+
+    /**
+     * Returns all edges connected to a specific node.
+     * @param nodeId - The ID of the node.
+     * @returns The array of edges connected to the node.
+     */
+    findEdges(nodeId: string): Edge[] {
+        return this._edges.filter(
+            edge => edge.source === nodeId || 
+            edge.target === nodeId
+        );
+    }
+
+    /**
+     * Returns a label by its identifier.
+     * @param id - The identifier of the label to be retrieved.
+     * @returns The label if found, undefined otherwise.
+     */
+    getLabel(id: string): Label | undefined {
+        return this._labels.find(label => label.id === id);
+    }
+
+    /**
+     * Returns all labels in the diagram.
+     * @returns The array of labels.
+     */
+    getLabels(): Label[] {
+        return this._labels;
+    }
+
+    get labelCount(): number {
+        return this._labels.length;
     }
 
     /**
@@ -124,19 +200,20 @@ export class Diagram {
     }
 
     /**
-     * Returns a label by its identifier.
-     * @param id - The identifier of the label to be retrieved.
-     * @returns The label if found, undefined otherwise.
+     * Checks if the diagram contains a label with the specified ID.
+     * @param id - The ID of the label to check for.
+     * @returns True if the label exists, false otherwise.
      */
-    getLabel(id: string): Label | undefined {
-        return this._labels.find(label => label.id === id);
+    containsLabel(id: string): boolean {
+        return this._labels.some(label => label.id === id);
     }
 
     /**
-     * Returns all labels in the diagram.
-     * @returns The array of labels.
+     * Clears the diagram by removing all nodes, edges, and labels.
      */
-    getLabels(): Label[] {
-        return this._labels;
+    clear(): void {
+        this._nodes.length = 0;
+        this._edges.length = 0;
+        this._labels.length = 0;
     }
 }
