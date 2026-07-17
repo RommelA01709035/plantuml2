@@ -36,8 +36,8 @@ export class Diagram {
     /**
      * Returns all nodes in the diagram. 
      */
-    getNodes(): Node[] {
-        return this._nodes;
+    getNodes(): readonly Node[] {
+        return [...this._nodes];
     }
 
     get nodeCount(): number {
@@ -104,8 +104,8 @@ export class Diagram {
      * Returns all edges in the diagram.
      * @returns The array of edges.
      */
-    getEdges(): Edge[] {
-        return this._edges;
+    getEdges(): readonly Edge[] {
+        return [...this._edges];
     }
 
     /**
@@ -169,8 +169,8 @@ export class Diagram {
      * Returns all labels in the diagram.
      * @returns The array of labels.
      */
-    getLabels(): Label[] {
-        return this._labels;
+    getLabels(): readonly Label[] {
+        return [...this._labels];
     }
 
     get labelCount(): number {
