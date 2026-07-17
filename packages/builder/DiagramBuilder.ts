@@ -1,5 +1,6 @@
-import { Diagram, Node } from "../core";
+import { Diagram, Node, Edge } from "../core";
 import { NodeBuilder } from "./NodeBuilder"
+import { EdgeBuilder } from "./EdgeBuilder"
 
 /**
  * Builder class for constructing a Diagram object.
@@ -13,14 +14,30 @@ import { NodeBuilder } from "./NodeBuilder"
 export class DiagramBuilder {
     private readonly diagram: Diagram;
 
-    constructor(id: string, name: string = "Untitled diagram"){
+    constructor(id: string, name?: string){
         this.diagram = new Diagram(id, name);
     }
 
-    node(id: string, name: string, kind: string = "node"): NodeBuilder {
+    node(id: string, name: string, kind?: string): NodeBuilder {
         const node = new Node(id, name, kind);
         this.diagram.addNode(node);
         return new NodeBuilder(this, node);
+    }
+
+    edge(id: string, sourceId: string, targetId: string): EdgeBuilder {
+        const sourceNode = this.diagram.getNode(sourceId);
+        const targetNode = this.diagram.getNode(targetId);
+
+        if (!sourceNode) {
+            throw new Error(`Source node with id "${sourceId}" does not exist.`);
+        }
+        if (!targetNode) {
+            throw new Error(`Target node with id "${targetId}" does not exist.`);
+        }
+
+        const edge = new Edge(id, sourceId, targetId);
+        this.diagram.addEdge(edge);
+        return new EdgeBuilder(this, edge);
     }
 
     build(): Diagram {

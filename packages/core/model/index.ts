@@ -1,2 +1,6 @@
 export * from "./Diagram"
 export * from "./Node"
+export * from "./Edge"
+export * from "./Label"
+export * from "./Group"
+export * from "./Port"
