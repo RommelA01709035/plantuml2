@@ -1,6 +1,15 @@
 import { Edge, Label } from "../core";
 import { DiagramBuilder } from "./DiagramBuilder";
 
+/**
+ * Builder class for constructing an Edge object.
+ * 
+ * @remarks
+ * This class provides a fluent interface for creating an Edge and its associated properties.
+ * It allows for the configuration of the edge's kind and label, and ultimately returns to the DiagramBuilder.
+ * 
+ * @public
+ */
 export class EdgeBuilder {
     private readonly diagramBuilder: DiagramBuilder;
     private readonly edge: Edge;

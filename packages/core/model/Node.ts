@@ -1,4 +1,5 @@
 import { Point, Size } from '../geometry';
+import { Label } from './Label';
 
 /**
  * Represents a node in a diagram with an identifier, name, kind, position, and size.
@@ -12,10 +13,11 @@ export class Node {
     readonly id: string;
     name: string;
     kind: string;
+    label?: Label;
     position: Point;
     size: Size;
-    visible: boolean;
-    locked: boolean;
+    visible: boolean = true;
+    locked: boolean = false;
 
     constructor(id: string, name: string, kind: string = "node") {
         this.id = id;
@@ -23,8 +25,6 @@ export class Node {
         this.kind = kind;
         this.position = new Point();
         this.size = new Size();
-        this.visible = true;
-        this.locked = false;
     }
 
     /**

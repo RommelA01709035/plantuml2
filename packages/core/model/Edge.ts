@@ -15,20 +15,17 @@ export class Edge {
     readonly target: string;
     kind: string;
     label?: Label;
-    visible: boolean;
-    locked: boolean;
+    visible: boolean = true;
+    locked: boolean = false;
 
     constructor(
         id: string,
         source: string,
         target: string,
-        kind: string = "edge"
     ) {
         this.id = id;
         this.source = source;
         this.target = target;
-        this.kind = kind;
-        this.visible = true;
-        this.locked = false;
+        this.kind = "default";
     }
 }
