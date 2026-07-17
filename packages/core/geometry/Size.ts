@@ -7,8 +7,11 @@
  * @public
  */
 export class Size {
-    constructor(
-        public width: number = 120, 
-        public height: number = 60
-    ) {}   
+    public width: number;
+    public height: number;
+
+    constructor(width: number = 120, height: number = 60) {
+        this.width = width;
+        this.height = height;
+    }
 }
