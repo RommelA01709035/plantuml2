@@ -8,6 +8,10 @@ import { DiagramBuilder } from "./DiagramBuilder";
  * This class provides a fluent interface for configuring a Node's properties such as position and size.
  * It allows for chaining method calls to set up the Node before returning to the DiagramBuilder context.
  * 
+ * @deprecated
+ * Prefer using node(..., ...configs).
+ * This class will be used internally by editor tools in the future.
+ * 
  * @public
  */
 export class NodeBuilder {
