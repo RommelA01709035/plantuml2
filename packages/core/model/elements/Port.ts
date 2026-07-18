@@ -1,4 +1,4 @@
-import { Point, Size } from "../geometry";
+import { Point, Size } from "../../geometry";
 
 /**
  * Represents a port of a node in a diagram.

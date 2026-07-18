@@ -1,7 +1,5 @@
-import { Node } from "./Node";
-import { Edge } from "./Edge";
-import { Label } from "./Label";
-import { Group } from "./Group";
+import { Node, Label, Group } from "./elements";
+import { Edge } from "./connection";
 
 /**
  * Represents a complete diagram.
