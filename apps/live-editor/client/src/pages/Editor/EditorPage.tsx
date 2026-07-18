@@ -3,7 +3,7 @@ import "./EditorPage.css";
 import { useMemo, useState } from "react";
 import { DiagramCanvas } from "../../components/DiagramCanvas";
 import { Editor } from "../../components/Editor";
-import { EditorService } from "../../services/EditorService";
+import { EditorService, RendererService } from "../../services";
 
 /**
  * Main page of the Live editor.
@@ -19,10 +19,9 @@ export function EditorPage() {
      */
     const [source, setSource] = useState(`User.node("My Node")\nProduct.node("My Product")`);
 
-    /**
-     * Single parser instance.
-     */
     const editorService = useMemo(() => new EditorService(), []);
+
+    const rendererService = useMemo(() => new RendererService(), []);
 
     /**
      * Result generated from the current source.
@@ -30,6 +29,13 @@ export function EditorPage() {
     const editorResult = useMemo(() => {
         return editorService.updateSource(source);
     }, [source, editorService]);
+
+    const svg = useMemo(() => {
+        if (!editorResult.diagram) {
+            return "";
+        }
+        return rendererService.render(editorResult.diagram);
+    }, [editorResult.diagram, rendererService]);
 
     return (
         <main className="editor-page">
@@ -39,11 +45,7 @@ export function EditorPage() {
                 onChange={setSource}
             />
 
-            {editorResult.diagram && (
-                <DiagramCanvas
-                    diagram={editorResult.diagram}
-                />
-            )}
+            <DiagramCanvas svg={svg} />
 
         </main>
     );
