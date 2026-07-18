@@ -1,4 +1,5 @@
 import { Point, Size } from "../../geometry";
+import { ModelElement } from "../ModelElement";
 
 /**
  * Base class for all diagram elements.
@@ -8,18 +9,14 @@ import { Point, Size } from "../../geometry";
  *
  * @public
  */
-export abstract class DiagramElement {
-    readonly id: string;
-    kind: string;
-
+export abstract class DiagramElement extends ModelElement {
     protected position: Point;
     protected size: Size;
     protected visible: boolean;
     protected locked: boolean;
 
     constructor(id: string, kind: string = "element") {
-        this.id = id;
-        this.kind = kind;
+        super(id, kind);
         this.position = new Point()
         this.size = new Size()
         this.visible = true;

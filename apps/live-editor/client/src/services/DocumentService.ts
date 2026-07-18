@@ -16,10 +16,8 @@ export class DocumentService {
      */
     createExampleDiagram(): Diagram {
         return new DiagramBuilder("example-diagram", "Example Diagram")
-            .node("node1", "Node 1").size(100, 120).position(100, 120)
-            .end()
-            .node("node2", "Node 2").size(100, 120).position(200, 120)
-            .end()
+            .node("node1", "Node 1", "default")
+            .node("node2", "Node 2", "entity")
             .build();
     }
 }
