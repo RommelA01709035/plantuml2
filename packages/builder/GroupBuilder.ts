@@ -67,4 +67,8 @@ export class GroupBuilder {
         this.group.detachGroup(groupId);
         return this;
     }
+
+    end(): DiagramBuilder {
+        return this.diagramBuilder;
+    }
 }

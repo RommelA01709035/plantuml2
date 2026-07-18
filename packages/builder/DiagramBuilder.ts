@@ -1,6 +1,7 @@
-import { Diagram, Node, Edge } from "../core";
+import { Diagram, Node, Edge, Group } from "../core";
 import { NodeBuilder } from "./NodeBuilder"
 import { EdgeBuilder } from "./EdgeBuilder"
+import { GroupBuilder } from "./GroupBuilder";
 
 /**
  * Builder class for constructing a Diagram object.
@@ -38,6 +39,12 @@ export class DiagramBuilder {
         const edge = new Edge(id, sourceId, targetId);
         this.diagram.addEdge(edge);
         return new EdgeBuilder(this, edge);
+    }
+
+    group(id: string, name: string, kind?: string): GroupBuilder {
+        const group = new Group(id, name, kind);
+        this.diagram.addGroup(group);
+        return new GroupBuilder(this, group);
     }
 
     build(): Diagram {
