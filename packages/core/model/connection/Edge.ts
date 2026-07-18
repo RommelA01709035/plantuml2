@@ -1,4 +1,5 @@
 import { Label } from "../elements";
+import { ModelElement } from "../ModelElement";
 
 /**
  * Represents a connection between two nodes.
@@ -9,12 +10,11 @@ import { Label } from "../elements";
  *
  * @public
  */
-export class Edge {
-    readonly id: string;
-    readonly kind: string;
-    readonly source: string;
-    readonly target: string;
+export class Edge extends ModelElement {
+    readonly sourceId: string;
+    readonly targetId: string;
     label?: Label;
+    style?: string;
 
     constructor(
         id: string,
@@ -22,9 +22,8 @@ export class Edge {
         target: string,
         kind: string = "default",
     ) {
-        this.id = id;
-        this.kind = kind;
-        this.source = source;
-        this.target = target;
+        super(id, kind);
+        this.sourceId = source;
+        this.targetId = target;
     }
 }

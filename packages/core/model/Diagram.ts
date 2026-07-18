@@ -74,8 +74,8 @@ export class Diagram {
         for (let i = this._edges.length - 1; i >= 0; i--) {
             const edge = this._edges[i];
             if (
-                edge.source === id ||
-                edge.target === id
+                edge.sourceId === id ||
+                edge.targetId === id
             ) {
                 this._edges.splice(i, 1);
             }
@@ -152,8 +152,8 @@ export class Diagram {
      */
     findEdges(nodeId: string): Edge[] {
         return this._edges.filter(
-            edge => edge.source === nodeId || 
-            edge.target === nodeId
+            edge => edge.sourceId === nodeId || 
+            edge.targetId === nodeId
         );
     }
 
