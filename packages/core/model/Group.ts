@@ -1,29 +1,21 @@
-import { Point, Size } from "../geometry";
+import { DiagramElement } from "./DiagramElement";
 
 /**
  * Represents a group of elements in a diagram.
  * @remarks
- * This class is part of the model module and can be used to define groups of elements in a diagram.
+ * This class inherits from DiagramElement class and 
+ * is part of the model module and can be used to define groups of elements in a diagram.
  *
  * @public
  */
-export class Group {
-    readonly id: string;
+export class Group extends DiagramElement {
     name: string;
-    kind: string;
-    position: Point;
-    size: Size;
-    visible: boolean = true;
-    locked: boolean = false;
     private readonly _nodeIds: string[];
     private readonly _groupIds: string[];
 
     constructor(id: string, name: string = "Untitled group", kind: string = "default") {
-        this.id = id;
+        super(id, kind);
         this.name = name;
-        this.kind = kind;
-        this.position = new Point();
-        this.size = new Size();
         this._nodeIds = [];
         this._groupIds = [];
     }
@@ -92,29 +84,5 @@ export class Group {
         }
         this._groupIds.splice(index, 1);
         return true;
-    }
-
-    /**
-     * Sets the position of the group.
-     */
-    setPosition(x: number, y: number): void {
-        this.position.x = x;
-        this.position.y = y;
-    }
-
-    /**
-     * Sets the size of the group.
-     */
-    setSize(width: number, height: number): void {
-        this.size.width = width;
-        this.size.height = height;
-    }
-
-    setVisible(visible: boolean): void {
-        this.visible = visible;
-    }
-
-    setLocked(locked: boolean): void {
-        this.locked = locked;
     }
 }

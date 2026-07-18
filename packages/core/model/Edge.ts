@@ -1,4 +1,5 @@
 import { Label } from "./Label";
+import { DiagramElement } from "./DiagramElement";
 
 /**
  * Represents a connection between two nodes.
@@ -9,23 +10,19 @@ import { Label } from "./Label";
  *
  * @public
  */
-export class Edge {
-    readonly id: string;
+export class Edge extends DiagramElement {
     readonly source: string;
     readonly target: string;
-    kind: string;
     label?: Label;
-    visible: boolean = true;
-    locked: boolean = false;
 
     constructor(
         id: string,
         source: string,
         target: string,
+        kind: string = "default",
     ) {
-        this.id = id;
+        super(id, kind);
         this.source = source;
         this.target = target;
-        this.kind = "default";
     }
 }

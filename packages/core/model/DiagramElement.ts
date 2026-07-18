@@ -10,7 +10,6 @@ import { Point, Size } from "../geometry";
  */
 export abstract class DiagramElement {
     readonly id: string;
-    name: string;
     kind: string;
 
     protected position: Point;
@@ -18,9 +17,8 @@ export abstract class DiagramElement {
     protected visible: boolean;
     protected locked: boolean;
 
-    constructor(id: string, name: string, kind: string = "element") {
+    constructor(id: string, kind: string = "element") {
         this.id = id;
-        this.name = name;
         this.kind = kind;
         this.position = new Point()
         this.size = new Size()
@@ -29,7 +27,7 @@ export abstract class DiagramElement {
     }
 
     getPosition(): Point {
-        return this.position;
+        return new Point(this.position.x, this.position.y);
     }
 
     setPosition(x: number, y: number): void {
@@ -38,7 +36,7 @@ export abstract class DiagramElement {
     }
 
     getSize(): Size {
-        return this.size;
+        return new Size(this.size.width, this.size.height);
     }
 
     setSize(width: number, height: number): void {

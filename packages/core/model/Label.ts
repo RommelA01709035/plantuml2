@@ -1,26 +1,19 @@
-import { Point } from "../geometry";
+import { DiagramElement } from "./DiagramElement";
 
 /**
  * Represents a textual label in a diagram.
  *
  * @remarks
+ * This class inherits from DiagramElement
  * Labels may belong to nodes, edges or groups.
  *
  * @public
  */
-export class Label {
-    readonly id: string;
+export class Label extends DiagramElement {
     text: string;
-    position: Point;
-    visible: boolean;
 
-    constructor(
-        id: string,
-        text: string
-    ) {
-        this.id = id;
+    constructor(id: string, text: string, kind: string = "label") {
+        super(id, kind);
         this.text = text;
-        this.position = new Point();
-        this.visible = true;
     }
 }
