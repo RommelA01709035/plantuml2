@@ -49,7 +49,7 @@ export class NodeBuilder {
         return this;
     }
 
-    end(): DiagramBuilder {
+    done(): DiagramBuilder {
         return this.diagramBuilder;
     }
 }
