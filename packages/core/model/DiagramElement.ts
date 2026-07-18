@@ -8,7 +8,7 @@ import { Point, Size } from "../geometry";
  *
  * @public
  */
-abstract class DiagramElement {
+export abstract class DiagramElement {
     readonly id: string;
     name: string;
     kind: string;
