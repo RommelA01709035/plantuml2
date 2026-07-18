@@ -1,1 +1,1 @@
-export * from "./Modifier";
+export * from "./generic";

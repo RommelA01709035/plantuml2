@@ -1,3 +1,4 @@
+export * from "./DiagramElement"
 export * from "./Diagram"
 export * from "./Node"
 export * from "./Edge"

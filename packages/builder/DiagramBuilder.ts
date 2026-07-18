@@ -1,7 +1,7 @@
 import { Diagram, Node, Edge, Group } from "../core";
 import { EdgeBuilder } from "./EdgeBuilder";
 import { GroupBuilder } from "./GroupBuilder";
-import type { Modifier } from "../modifiers";
+import type { Modifier } from "../modifiers/generic";
 
 /**
  * Builder class for constructing a Diagram object.

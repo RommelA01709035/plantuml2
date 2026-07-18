@@ -1,5 +1,5 @@
 import { Group, Node } from "../core";
-import type { Modifier } from "../modifiers";
+import type { Modifier } from "../modifiers/generic";
 import { DiagramBuilder } from "./DiagramBuilder";
 
 /**
