@@ -1,7 +1,7 @@
 import { Diagram, Node, Edge, Group } from "../core";
-import { NodeBuilder } from "./NodeBuilder"
-import { EdgeBuilder } from "./EdgeBuilder"
+import { EdgeBuilder } from "./EdgeBuilder";
 import { GroupBuilder } from "./GroupBuilder";
+import type { Modifier } from "../modifiers";
 
 /**
  * Builder class for constructing a Diagram object.
@@ -19,10 +19,11 @@ export class DiagramBuilder {
         this.diagram = new Diagram(id, name);
     }
 
-    node(id: string, name: string, kind?: string): NodeBuilder {
+    node(id: string, name: string, kind: string = "node", ...modifiers: Modifier<Node>[]): this {
         const node = new Node(id, name, kind);
+        modifiers.forEach(m => m.apply(node))
         this.diagram.addNode(node);
-        return new NodeBuilder(this, node);
+        return this;
     }
 
     edge(id: string, sourceId: string, targetId: string): EdgeBuilder {

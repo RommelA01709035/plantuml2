@@ -1,4 +1,5 @@
-import { Group } from "../core";
+import { Group, Node } from "../core";
+import type { Modifier } from "../modifiers";
 import { DiagramBuilder } from "./DiagramBuilder";
 
 /**
@@ -10,65 +11,32 @@ import { DiagramBuilder } from "./DiagramBuilder";
  * @public
  */
 export class GroupBuilder {
-    private readonly diagramBuilder: DiagramBuilder;
-    private readonly group: Group;
+    private readonly _parent: DiagramBuilder;
+    private readonly _group: Group;
 
     constructor(diagramBuilder: DiagramBuilder, group: Group) {
-        this.diagramBuilder = diagramBuilder;
-        this.group = group;
+        this._parent = diagramBuilder;
+        this._group = group;
     }
 
-    position(x: number, y: number): this {
-        this.group.setPosition(x, y);
+    node(id: string, name: string, kind: string = "node", ...modifiers: Modifier<Node>[]): this {
+        const node = new Node(id, name, kind);
+        modifiers.forEach(m => m.apply(node));
+        this._group.addNode(node);
         return this;
     }
 
-    size(width: number, height: number): this {
-        this.group.setSize(width, height);
-        return this;
+    group(id: string, name: string, kind: string = "group"): GroupBuilder {
+        const child = new Group(id, name, kind);
+        this._group.addGroup(child);
+        return new GroupBuilder(
+            this._parent,
+            child
+        );
     }
 
-    show(): this {
-        this.group.setVisible(true);
-        return this;
-    }
-
-    hide(): this {
-        this.group.setVisible(false);
-        return this;
-    }
-
-    lock(): this {
-        this.group.setLocked(true);
-        return this;
-    }
-
-    unlock(): this {
-        this.group.setLocked(false);
-        return this;
-    }
-
-    attachNode(nodeId: string): this {
-        this.group.attachNode(nodeId);
-        return this;
-    }
-
-    detachNode(nodeId: string): this {
-        this.group.detachNode(nodeId);
-        return this;
-    }
-
-    attachGroup(groupId: string): this {
-        this.group.attachGroup(groupId);
-        return this;
-    }
-
-    detachGroup(groupId: string): this {
-        this.group.detachGroup(groupId);
-        return this;
-    }
 
     end(): DiagramBuilder {
-        return this.diagramBuilder;
+        return this._parent;
     }
 }
