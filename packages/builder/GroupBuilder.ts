@@ -4,9 +4,13 @@ import { DiagramBuilder } from "./DiagramBuilder";
 
 /**
  * Builder class for constructing a Group object.
+ * 
  * @remarks
  * This class provides a fluent interface for creating a Group and its associated properties.
  * It allows for the configuration of the group's name and ultimately returns to the DiagramBuilder.
+ * A GroupBuilder is used to build the contents of a group.
+ * Nodes and child groups belong to the group, while edges are
+ * always owned by the diagram.
  * 
  * @public
  */
@@ -14,8 +18,8 @@ export class GroupBuilder {
     private readonly _parent: DiagramBuilder;
     private readonly _group: Group;
 
-    constructor(diagramBuilder: DiagramBuilder, group: Group) {
-        this._parent = diagramBuilder;
+    constructor(parent: DiagramBuilder, group: Group) {
+        this._parent = parent;
         this._group = group;
     }
 
@@ -26,15 +30,12 @@ export class GroupBuilder {
         return this;
     }
 
-    group(id: string, name: string, kind: string = "group"): GroupBuilder {
+    group(id: string, name: string, kind: string = "group", ...modifiers: Modifier<Group>[]): GroupBuilder {
         const child = new Group(id, name, kind);
+        modifiers.forEach(m => m.apply(child));
         this._group.addGroup(child);
-        return new GroupBuilder(
-            this._parent,
-            child
-        );
+        return new GroupBuilder(this._parent, child);
     }
-
 
     end(): DiagramBuilder {
         return this._parent;

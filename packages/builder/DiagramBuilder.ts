@@ -42,8 +42,9 @@ export class DiagramBuilder {
         return new EdgeBuilder(this, edge);
     }
 
-    group(id: string, name: string, kind?: string): GroupBuilder {
+    group(id: string, name: string, kind: string = "group", ...modifiers: Modifier<Group>[]): GroupBuilder {
         const group = new Group(id, name, kind);
+        modifiers.forEach(m => m.apply(group));
         this.diagram.addGroup(group);
         return new GroupBuilder(this, group);
     }
