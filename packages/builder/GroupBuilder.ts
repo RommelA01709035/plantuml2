@@ -1,6 +1,6 @@
-import { Group, Node } from "../core";
+import { Group, Node, Edge, DiagramElement } from "../core";
 import type { Modifier } from "../modifiers/generic";
-import { DiagramBuilder } from "./DiagramBuilder";
+import type { BuilderContext } from "./interfaces"
 
 /**
  * Builder class for constructing a Group object.
@@ -14,30 +14,51 @@ import { DiagramBuilder } from "./DiagramBuilder";
  * 
  * @public
  */
-export class GroupBuilder {
-    private readonly _parent: DiagramBuilder;
+export class GroupBuilder<TParent extends BuilderContext> implements BuilderContext {
+    private readonly _parent: TParent;
     private readonly _group: Group;
 
-    constructor(parent: DiagramBuilder, group: Group) {
+    constructor(parent: TParent, group: Group) {
         this._parent = parent;
         this._group = group;
     }
 
-    node(id: string, name: string, kind: string = "node", ...modifiers: Modifier<Node>[]): this {
+    /** @internal */
+    addNode(node: Node): void {
+        this._group.addNode(node);
+    }
+
+    /** @internal */
+    addGroup(group: Group): void {
+        this._group.addGroup(group);
+    }
+
+    /** @internal */
+    addEdge(edge: Edge): void {
+        this._parent.addEdge(edge);
+    }
+
+    node(id: string, name: string, kind: string = "node", ...modifiers: Modifier<DiagramElement>[]): this {
         const node = new Node(id, name, kind);
-        modifiers.forEach(m => m.apply(node));
+        modifiers.forEach(modifier => modifier.apply(node));
         this._group.addNode(node);
         return this;
     }
 
-    group(id: string, name: string, kind: string = "group", ...modifiers: Modifier<Group>[]): GroupBuilder {
+    edge(id: string, sourceId: string, targetId: string): this {
+        const edge = new Edge(id, sourceId, targetId);
+        this.addEdge(edge);
+        return this;
+    }
+
+    group(id: string, name: string, kind: string = "group", ...modifiers: Modifier<DiagramElement>[]): GroupBuilder<TParent> {
         const child = new Group(id, name, kind);
-        modifiers.forEach(m => m.apply(child));
-        this._group.addGroup(child);
+        modifiers.forEach(modifier => modifier.apply(child));
+        this.addGroup(child);
         return new GroupBuilder(this._parent, child);
     }
 
-    end(): DiagramBuilder {
+    end(): TParent {
         return this._parent;
     }
 }
