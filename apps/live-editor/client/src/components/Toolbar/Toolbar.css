@@ -1,0 +1,11 @@
+.toolbar {
+    height: 56px;
+    border-bottom: 1px solid #d9d9d9;
+
+    display: flex;
+    align-items: center;
+
+    padding: 0 16px;
+
+    font-weight: bold;
+}
