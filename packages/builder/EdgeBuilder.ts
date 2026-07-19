@@ -1,4 +1,5 @@
-import { Edge, Label } from "../core";
+import { Edge } from "../core";
+import { Label } from "../core/model";
 import { DiagramBuilder } from "./DiagramBuilder";
 
 /**
