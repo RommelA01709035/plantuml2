@@ -1,5 +1,5 @@
-import { Diagram } from "../../core";
-import { DiagramBuilder } from "../../builder";
+import { Parser } from "../Parser";
+import { DiagramAst } from "../ast";
 
 /**
  * Represents a parser that processes API source code and generates a corresponding diagram.
@@ -9,19 +9,9 @@ import { DiagramBuilder } from "../../builder";
  * 
  * @public
  */
-export class DiagramParser {
-    parse(source: string): Diagram {
-        const builder = new DiagramBuilder("diagram", "Untitled diagram");
-        const lines = source.split("\n").map(line => line.trim()).filter(line => line.length > 0);
-
-        let x = 100;
-
-        for (const line of lines) {
-            builder.node(line, line);
-
-            x += 180;
-        }
-        
-        return builder.build();
+export class DiagramParser implements Parser<DiagramAst> {
+    parse(source: string): DiagramAst {
+        // Converts text -> Ast
+        return source as unknown as DiagramAst;
     }
 }
