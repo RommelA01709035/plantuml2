@@ -5,11 +5,11 @@ import { DiagramBuilder } from "../../builder";
  * Represents a parser that processes API source code and generates a corresponding diagram.
  * 
  * @remarks
- * The DiagramInterpreter class is responsible for parsing the API source code and constructing a corresponding diagram using the DiagramBuilder.
+ * The DiagramParser class is responsible for parsing the API source code and constructing a corresponding diagram using the DiagramBuilder.
  * 
  * @public
  */
-export class DiagramInterpreter {
+export class DiagramParser {
     parse(source: string): Diagram {
         const builder = new DiagramBuilder("diagram", "Untitled diagram");
         const lines = source.split("\n").map(line => line.trim()).filter(line => line.length > 0);
