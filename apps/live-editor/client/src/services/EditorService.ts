@@ -1,4 +1,6 @@
-import { Interpreter } from "../../../../../packages/interpreter";
+import { DiagramInterpreter } from "../../../../../packages/interpreter";
+import type { Interpreter } from "../../../../../packages/interpreter";
+import type { Diagram } from "../../../../../packages/core";
 import type { EditorResult } from "./types/EditorResult";
 
 /**
@@ -11,10 +13,10 @@ import type { EditorResult } from "./types/EditorResult";
  * @public
  */
 export class EditorService {
-    private readonly interpreter: Interpreter;
+    private readonly interpreter: Interpreter<string, Diagram>;
 
     constructor() {
-        this.interpreter = new Interpreter();
+        this.interpreter = new DiagramInterpreter();
     }
 
     /**
@@ -26,7 +28,7 @@ export class EditorService {
     updateSource(source: string): EditorResult {
         try {
             return {
-                diagram: this.interpreter.parse(source),
+                diagram: this.interpreter.interpret(source),
                 errors: []
             };
         } catch (error) {

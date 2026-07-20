@@ -1,4 +1,4 @@
-import { Interpreter } from "./Interpreter";
+import type { Interpreter } from "./Interpreter";
 import { Diagram } from "../core"
 import { DiagramBuilder } from "../builder";
 
