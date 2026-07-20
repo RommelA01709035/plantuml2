@@ -1,4 +1,4 @@
-import { Node } from "../../core";
+import { Node } from "../../../core";
 
 /**
  * Represents a renderer that generates SVG output for a given node.
@@ -11,23 +11,23 @@ import { Node } from "../../core";
 export class NodeRenderer {
     render(node: Node): string {
 
-        if (!node.visible) {
+        if (!node.isVisible()) {
             return "";
         }
         return `
         <g id="${node.id}">
             <rect
-            x="${node.position.x}"
-            y="${node.position.y}"
-            width="${node.size.width}"
-            height="${node.size.height}"
+            x="${node.getPosition().x}"
+            y="${node.getPosition().y}"
+            width="${node.getSize().width}"
+            height="${node.getSize().height}"
             fill="white"
             stroke="black"
             />
 
             <text
-                x="${node.position.x + 10}"
-                y="${node.position.y + 25}"
+                x="${node.getPosition().x + 10}"
+                y="${node.getPosition().y + 25}"
             >
                 ${node.name ?? ""}
             </text>

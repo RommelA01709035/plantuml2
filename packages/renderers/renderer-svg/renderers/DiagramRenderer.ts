@@ -1,4 +1,4 @@
-import { Diagram } from "../../core";
+import { Diagram } from "../../../core";
 import { NodeRenderer } from "./NodeRenderer";
 
 /**

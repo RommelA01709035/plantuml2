@@ -17,7 +17,7 @@ export function EditorPage() {
     /**
      * Source code written by the user.
      */
-    const [source, setSource] = useState(`User.node("My Node")\nProduct.node("My Product")`);
+    const [source, setSource] = useState(`User.node("MyNode", "User", "actor").build()`);
 
     const editorService = useMemo(() => new EditorService(), []);
 

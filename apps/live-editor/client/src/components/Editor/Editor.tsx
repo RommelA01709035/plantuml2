@@ -44,7 +44,7 @@ export function Editor({ value, onChange }: EditorProps) {
           spellCheck={false}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          placeholder={`User.node("My Node")\nProduct.node("My Product")`}
+          placeholder={`User.node("MyNode", "User", "actor").build()`}
       />
 
     </section>

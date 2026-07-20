@@ -16,6 +16,11 @@ export class DiagramInterpreter implements Interpreter<string, Diagram> {
 
         // TODO:
         // Temporary implementation.
+        builder.node(
+            "1",
+            input,
+            "default"
+        );
 
         return builder.build();
     }
