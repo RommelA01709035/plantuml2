@@ -17,7 +17,7 @@ export class DiagramInterpreter {
         let x = 100;
 
         for (const line of lines) {
-            builder.node(line, line).position(x, 100).size(200, 100).end();
+            builder.node(line, line);
 
             x += 180;
         }

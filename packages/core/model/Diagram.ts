@@ -1,4 +1,4 @@
-import { Node, Label, Group } from "./elements";
+import { Node, Group } from "./elements";
 import { Edge } from "./connection";
 
 /**
@@ -15,7 +15,6 @@ export class Diagram {
     name: string;
     private readonly _nodes: Node[];
     private readonly _edges: Edge[];
-    private readonly _labels: Label[];
     private readonly _groups: Group[];
 
     constructor(id: string, name: string = "Untitled diagram"){
@@ -23,7 +22,6 @@ export class Diagram {
         this.name = name;
         this._nodes = [];
         this._edges = [];
-        this._labels = [];
         this._groups = [];
     } 
 
@@ -156,59 +154,6 @@ export class Diagram {
             edge.targetId === nodeId
         );
     }
-
-    /**
-     * Returns a label by its identifier.
-     * @param id - The identifier of the label to be retrieved.
-     * @returns The label if found, undefined otherwise.
-     */
-    getLabel(id: string): Label | undefined {
-        return this._labels.find(label => label.id === id);
-    }
-
-    /**
-     * Returns all labels in the diagram.
-     * @returns The array of labels.
-     */
-    getLabels(): readonly Label[] {
-        return [...this._labels];
-    }
-
-    get labelCount(): number {
-        return this._labels.length;
-    }
-
-    /**
-     * Adds a label to the diagram.
-     * @param label - The label to be added to the diagram.
-     */
-    addLabel(label: Label): void {
-        this._labels.push(label);
-    }
-
-    /**
-     * Removes a label from the diagram.
-     * @param id - The identifier of the label to be removed.
-     * @returns True if the label was removed, false otherwise.
-     */
-    removeLabel(id: string): boolean {
-        const index = this._labels.findIndex(label => label.id === id);
-        if(index === -1){
-            return false;
-        }
-        this._labels.splice(index, 1);
-        return true;
-    }
-
-    /**
-     * Checks if the diagram contains a label with the specified ID.
-     * @param id - The ID of the label to check for.
-     * @returns True if the label exists, false otherwise.
-     */
-    containsLabel(id: string): boolean {
-        return this._labels.some(label => label.id === id);
-    }
-
     /**
      * Returns a group by its identifier.
      * @param id - The identifier of the group to be retrieved.
@@ -271,7 +216,6 @@ export class Diagram {
     clear(): void {
         this._nodes.length = 0;
         this._edges.length = 0;
-        this._labels.length = 0;
         this._groups.length = 0;
     }
 }
